@@ -15,14 +15,38 @@
     "ios": {
       "supportsTablet": true
     },
+    
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ],
+      "package": "com.arunsss.BlueTest"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "react-native-ble-plx"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "581f75d0-4dde-4424-a447-2faee3576ba1"
+      }
     }
   }
 }
