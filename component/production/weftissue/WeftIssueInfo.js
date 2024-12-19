@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftIssueList from '../weftissue/WeftIssueList';
-import NetInfo from '@react-native-community/netinfo';
+
 
 
 const WeftIssueInfo = () => {
@@ -170,8 +170,6 @@ const WeftIssueInfo = () => {
           const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
             LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation 
           }
-          const state = await NetInfo.fetch();
-          if (state.isConnected) {
             setLoading(true);
             const response = await postToAPI('/insert_weft_issue', data);
             setLoading(false);
@@ -190,12 +188,6 @@ const WeftIssueInfo = () => {
                 text1: response.message,
               });
             }
-          } else {
-            Toast.show({
-              ...toastConfig.error,
-              text1: 'Please Check Internet Connection',
-            });
-          }
         }
         else{
           Toast.show({

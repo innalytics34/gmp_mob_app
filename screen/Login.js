@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Button, Input, Icon } from 'react-native-elements';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Button } from 'react-native-elements';
 import Toast from 'react-native-toast-message';
 import { postToAPI, getFromAPI } from '../apicall/apicall';
 import { useAuth } from '../auth/AuthContext';
 import { colors, toastConfig } from '../component/config/config';
 import Dropdown from '../component/dropdown/Dropdown';
-import { TextInput as PaperInput} from 'react-native-paper';
+import { TextInput as PaperInput } from 'react-native-paper';
+import { Ionicons } from '@expo/vector-icons'; 
+import axios from 'axios';
 
 
 const LoginScreen = () => {
@@ -14,17 +16,27 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameList, setUserNameList] = useState([]);
+  const [getAppVersion, setAppVersion] = useState('');
   const [errors, setErrors] = useState({});
-  const { login } = useAuth();
-
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false); 
+  const { login, setipconfig } = useAuth();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [response] = await Promise.all([
-        getFromAPI('/get_userlist')
+
+      const ipconfig = await axios.get('https://demomisapi.azurewebsites.net/gmp/get_gmpapiipconfig', {
+        headers: {
+            'accept': 'application/json', 
+        }
+      });
+      setipconfig(ipconfig.data)
+      const [response, response1] = await Promise.all([
+        getFromAPI('/get_userlist'),
+        getFromAPI('/get_setting'),
       ]);
       setUserNameList(response.userlist);
+      setAppVersion(response1.setting[0].AppVersion);
     } catch (error) {
       Alert.alert('Error', 'Failed to load filter data.');
       console.error('Error fetching filter data:', error);
@@ -33,21 +45,33 @@ const LoginScreen = () => {
     }
   };
 
-  useEffect(()=>{
-    fetchData()
-  }, [])
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const checkVersion = () => {
+    return getAppVersion === '1.0.3';
+  };
 
   const handleLogin = async () => {
     setLoading(true);
     const newErrors = {};
     try {
+      const isCheckVersion = checkVersion();
+      if (isCheckVersion) {
+        Toast.show({
+          ...toastConfig.error,
+          text1: `Use Version  ${getAppVersion}`,
+        });
+        return;
+      }
       if (!email) newErrors.username = 'Username is required';
       if (!password) newErrors.password = 'Password is required';
-      const data = { username: email, password: password };
+      const data = { username: email, password: password, version: '1.0.3'};
       setErrors(newErrors);
       if (Object.keys(newErrors).length === 0) {
         setLoading(true);
-        const result = await postToAPI("/login", data);
+        const result = await postToAPI('/login', data);
         setLoading(false);
         if (result.rval > 0) {
           const userData = {
@@ -64,7 +88,6 @@ const LoginScreen = () => {
           });
         }
       }
-     
     } catch (error) {
       Toast.show({
         ...toastConfig.error,
@@ -75,51 +98,76 @@ const LoginScreen = () => {
     }
   };
 
-  const handleUserChange = (value)=>{
+  const handleUserChange = (value) => {
     setEmail(value);
     setErrors((prevErrors) => ({ ...prevErrors, username: '' }));
-  }
+  };
 
-  const handlePasswordChange =(value)=>{
+  const handlePasswordChange = (value) => {
     setPassword(value);
     setErrors((prevErrors) => ({ ...prevErrors, password: '' }));
-  }
+  };
+
+  const togglePasswordVisibility = () => {
+    setIsPasswordVisible(!isPasswordVisible); 
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.primary }]}>GMP WEAVING MILLS PRIVATE LIMITED</Text>
-
-      <View style={{padding:10}}>
+    <>
+      <View>
+        <Text style={{ padding: 5, fontWeight: 'bold', color: colors.header }}>
+          Version 1.0.3
+        </Text>
+      </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.primary }]}>
+          GMP WEAVING MILLS PRIVATE LIMITED
+        </Text>
+        <View style={{ padding: 10 }}>
           <Dropdown
             data={usernameList}
             setSelectdp={handleUserChange}
             label="Username"
             Selectdp={email}
           />
-       {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
-      </View>
-      
-      <View style={{padding:13}}>
-      <PaperInput
-        label="Password"
-        value={password}
-        style={[styles.input, { fontSize: 14 }]}
-        onChangeText={handlePasswordChange}
-        mode="outlined"
-        theme={{
-          colors: {
-            primary: colors.data,
-            error: colors.error,
-            outline: colors.data,
-            disabled: 'red',
-          },
-          roundness: 4,
-        }}
-      />
-      {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
-      </View>
+          {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
+        </View>
 
-      <View style={{padding:13}}>
+        <View style={{ padding: 13 }}>
+          <PaperInput
+            label="Password"
+            value={password}
+            style={[styles.input, { fontSize: 14 }]}
+            onChangeText={handlePasswordChange}
+            mode="outlined"
+            secureTextEntry={!isPasswordVisible} 
+            theme={{
+              colors: {
+                primary: colors.data,
+                error: colors.error,
+                outline: colors.data,
+                disabled: 'red',
+              },
+              roundness: 4,
+            }}
+            right={
+              <PaperInput.Icon
+                name={() => (
+                  <TouchableOpacity onPress={togglePasswordVisibility}>
+                    <Ionicons
+                      name={isPasswordVisible ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={colors.data}
+                    />
+                  </TouchableOpacity>
+                )}
+              />
+            }
+          />
+          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+        </View>
+
+        <View style={{ padding: 13 }}>
           <Button
             title="Login"
             icon={{
@@ -134,10 +182,11 @@ const LoginScreen = () => {
             loading={loading}
             loadingProps={{ size: 'small', color: '#fff' }}
           />
+        </View>
+
+        <Toast ref={(ref) => Toast.setRef(ref)} />
       </View>
-      
-      <Toast ref={(ref) => Toast.setRef(ref)} />
-    </View>
+    </>
   );
 };
 
@@ -164,11 +213,10 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     paddingVertical: 10,
   },
-
   errorText: {
     color: colors.error,
     marginBottom: 8,
-    fontSize: 10
+    fontSize: 10,
   },
 });
 

@@ -80,12 +80,12 @@ export default function App() {
             bluetooth_conf.char_id,
             print_data
               );
-          // await bleManager.writeCharacteristicWithResponseForDevice(
-          //   bluetooth_conf.device_id,
-          //   bluetooth_conf.service_id,
-          //   bluetooth_conf.char_id,
-          //   print_data
-          //     );   
+          await bleManager.writeCharacteristicWithResponseForDevice(
+            bluetooth_conf.device_id,
+            bluetooth_conf.service_id,
+            bluetooth_conf.char_id,
+            print_data
+              );   
           bleManager.destroy()
       }
       else {

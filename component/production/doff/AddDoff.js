@@ -22,6 +22,8 @@ import { generatePrintData } from '../../bluetoothPrinter/generatePrintData';
 import { format } from 'date-fns';
 import { setdoffinfo } from '../doff/commonSlice';
 import {resetQrData} from '../../barcodescan/QrSlice';
+import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
+import { setwarpInfo, updateSelectedType } from '../doff/commonSlice';
 
 
 const AddDoff = () => {
@@ -48,6 +50,11 @@ const AddDoff = () => {
   const [getBlueToothConfig, setBlueToothConfig] = useState(1);
   const [getBlueToothConfigList, setBlueToothConfigList] = useState([]);
   const [ishideloomDp, setIshideloomDp] = useState(false);
+  const [stat_RollDOffApprovedFirstRoll, setstat_RollDOffApprovedFirstRoll] = useState(0);
+  const [stat_ProductionMeterValidation, setstat_ProductionMeterValidation] = useState(0);
+  const [ButtonDisable, setButtonDisable] = useState(false);
+  const [ischeckweftcount, setischeckweftcount] = useState(false);
+  const [stat_ProductionMeterFirstRoll, setstat_ProductionMeterFirstRoll] = useState(0);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -61,14 +68,14 @@ const AddDoff = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [response, response1, response2] = await Promise.all([
+      const [response, response1, response2, response3] = await Promise.all([
         getFromAPI('/loom_no_dropdown'),
         getFromAPI('/rolltype_dropdown'),
-        getFromAPI('/get_bluetooth_config')
+        getFromAPI('/get_bluetooth_config'),
       ]);
       setLoomNoDp(response.document_info);
       setRollTypeDp(response1.roll_type);
-      setBlueToothConfigList(response2.bluetooth_config)
+      setBlueToothConfigList(response2.bluetooth_config);
     } catch (error) {
       Alert.alert('Error', 'Failed to load filter data.');
       console.error('Error fetching filter data:', error);
@@ -86,7 +93,7 @@ const AddDoff = () => {
   useEffect(() => {
     setLoading(true);
     if (Array.isArray(getLoomNoDp)) {
-          if (qrDataDoff != null && getLoomNoDp.length > 0 &&  qrDataDoff.length < 10){
+          if (qrDataDoff != null && getLoomNoDp.length > 0 &&  qrDataDoff.length < 7){
             const result = getLoomNoDp.find(item => item.Description === qrDataDoff);
             if (result) {
               setIshideloomDp(true);
@@ -111,6 +118,27 @@ const AddDoff = () => {
     }
   };
 
+  const get_stat_ProductionMeterValidation = async(selectedData)=>{
+    const data = {WorkOrderID: selectedData.WorkOrderID }
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const response = await getFromAPI('/stat_ProductionMeterValidation?data=' + encodedFilterData);
+    setstat_ProductionMeterValidation(response.value);
+  }
+
+  const get_stat_RollDOffApprovedFirstRoll = async(selectedData)=>{
+    const data = {WorkOrderID: selectedData.WorkOrderID }
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const response = await getFromAPI('/stat_RollDOffApprovedFirstRoll?data=' + encodedFilterData);
+    setstat_RollDOffApprovedFirstRoll(response.count);
+  } 
+
+  const get_stat_ProductionMeterFirstRoll = async(selectedData)=>{
+    const data = {WorkOrderID: selectedData.WorkOrderID }
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const response = await getFromAPI('/stat_ProductionMeterFirstRoll?data=' + encodedFilterData);
+    setstat_ProductionMeterFirstRoll(response.count);
+  } 
+
   const handleLoomNoChange = async (selectedLoom) => {
     setErrors((prevErrors) => ({ ...prevErrors, loomNo: '' }));
     setLoomNo(selectedLoom);
@@ -123,6 +151,9 @@ const AddDoff = () => {
       setweightPerMtr(response.WeightPerMeter.toString());
       setBeamDetails(response.beam_details);
       setWeftDetails(response.weft_details);
+      get_stat_RollDOffApprovedFirstRoll(selectedData);
+      get_stat_ProductionMeterValidation(selectedData);
+      get_stat_ProductionMeterFirstRoll(selectedData);
     } else {
       setRollNo('');
       setBeamDetails([]);
@@ -138,130 +169,95 @@ const AddDoff = () => {
     return count == 0 ? true : false
   }
 
-  const handleBluetoothState = async (bleManager) => {
-    const currentState = await bleManager.state();
-    return currentState;
-};
+  
+  const handleConfirmSave = async(doffinfo)=>{
+    setLoading(true);
+    const data = { doffinfo, page_type: 0 }
+    const response = await postToAPI('/insert_doff_info', data);
+        setLoading(false);
+        if (response.rval > 0) {
+          Toast.show({
+            ...toastConfig.success,
+            text1: response.message,
+          });
+          setTimeout(() => {
+            setButtonDisable(false);
+            navigation.navigate('Admin');
+          }, 1000);
+        }
+        else{
+          setButtonDisable(false);
+          Toast.show({
+            ...toastConfig.error,
+            text1: response.message,
+          });
+        }
+     }
+
 
   const handleSave = async (doffinfo) => {
-    const bleManager = new BleManager();
-    const blueStat = await handleBluetoothState(bleManager);
-    if (blueStat == 'PoweredOn'){
-      const data = { doffinfo, page_type: 0 }
-      setLoading(true);
-      const response = await postToAPI('/insert_doff_info', data);
-      setLoading(false);
-      if (response.rval > 0) {
-        Toast.show({
-          ...toastConfig.success,
-          text1: response.message,
-        });
-        const formattedDate = format(new Date(), 'hh:mm a');
-        const print_data =  generatePrintData(getRollNo + ' M-' + String(doffMeter) +  ' ' + formattedDate, '  ' + selectedLoomNoDet.SortNo + ' B-' + selectedLoomNoDet.BeamNo, getRollNo)
-        const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
-        const isConnected = await bleManager.isDeviceConnected(bluetooth_conf.device_id);
-        if (!isConnected){
-            const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-            await connected.discoverAllServicesAndCharacteristics();
-            if (response.dataprint.length> 0){
-              for (const item of response.dataprint) {
-                const formattedDate1 = format(new Date(), 'hh:mm a');
-                const print_data1 = generatePrintData(item.RollNo + ' M-' + String(doffMeter) + ' ' + formattedDate1, ' ' + item.SortNo + ' B-' + selectedLoomNoDet.BeamNo, item.RollNo);
-                
-                await bleManager.writeCharacteristicWithResponseForDevice(
-                  bluetooth_conf.device_id,
-                  bluetooth_conf.service_id,
-                  bluetooth_conf.char_id,
-                  print_data1
-                );
-                
-                await bleManager.writeCharacteristicWithResponseForDevice(
-                  bluetooth_conf.device_id,
-                  bluetooth_conf.service_id,
-                  bluetooth_conf.char_id,
-                  print_data1
-                );
-              }
-              
-              bleManager.destroy();
-            }
-            else{
-              await bleManager.writeCharacteristicWithResponseForDevice(
-                bluetooth_conf.device_id,
-                bluetooth_conf.service_id,
-                bluetooth_conf.char_id,
-                print_data
-                  );
-              await bleManager.writeCharacteristicWithResponseForDevice(
-                bluetooth_conf.device_id,
-                bluetooth_conf.service_id,
-                bluetooth_conf.char_id,
-                print_data
-                  );   
-              bleManager.destroy()
-
-            }
-            
-        }
-        else {
-          const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-            await connected.discoverAllServicesAndCharacteristics();
-            if (response.dataprint.length> 0){
-              for (const item of response.dataprint) {
-                const formattedDate1 = format(new Date(), 'hh:mm a');
-                const print_data1 = generatePrintData(item.RollNo + ' M-' + String(doffMeter) + ' ' + formattedDate1, ' ' + item.SortNo + ' B-' + selectedLoomNoDet.BeamNo, item.RollNo);
-              
-                await bleManager.writeCharacteristicWithResponseForDevice(
-                  bluetooth_conf.device_id,
-                  bluetooth_conf.service_id,
-                  bluetooth_conf.char_id,
-                  print_data1
-                );
-                
-                await bleManager.writeCharacteristicWithResponseForDevice(
-                  bluetooth_conf.device_id,
-                  bluetooth_conf.service_id,
-                  bluetooth_conf.char_id,
-                  print_data1
-                );
-              }
-              bleManager.destroy();
-            }
-            else{
-              await bleManager.writeCharacteristicWithResponseForDevice(
-                bluetooth_conf.device_id,
-                bluetooth_conf.service_id,
-                bluetooth_conf.char_id,
-                print_data
-                  );
-              await bleManager.writeCharacteristicWithResponseForDevice(
-                bluetooth_conf.device_id,
-                bluetooth_conf.service_id,
-                bluetooth_conf.char_id,
-                print_data
-                  );   
-              bleManager.destroy()
-
-            }
-        }
-        setTimeout(() => {
-          navigation.navigate('Admin');
-        }, 1000);
-      }
-      else {
-        Toast.show({
-          ...toastConfig.error,
-          text1: response.message,
-        });
-      }
-
-      
+    setButtonDisable(true);
+    const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
+    const res = await bluetoothconfig(bluetooth_conf, setLoading) ;
+    if (res.val == 0) {
+      Alert.alert(
+       res.message, 
+        `Are you sure to Save without print`, 
+        [
+          { 
+            text: "Cancel", 
+            onPress: () =>  setButtonDisable(false), 
+            style: "cancel"
+          },
+          { 
+            text: "Save", 
+            onPress: () => handleConfirmSave(doffinfo), 
+          },
+        ],
+        { cancelable: false } 
+      );
     }
     else{
-      Toast.show({
-            ...toastConfig.error,
-            text1: 'Turn ON Bluetooth to Print!',
+      setLoading(true);
+      const data = { doffinfo, page_type: 0 }
+      const response = await postToAPI('/insert_doff_info', data);
+        setLoading(false);
+        if (response.rval > 0) {
+          Toast.show({
+            ...toastConfig.success,
+            text1: response.message,
           });
+          const bleManager = new BleManager();
+          for (const item of response.dataprint) {
+            const formattedDate = format(new Date(), 'hh:mm a');
+            const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + formattedDate, ' ' + item.SortNo + ' B-' + item.BeamNumber, item.RollNo);
+            const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
+            await connected.discoverAllServicesAndCharacteristics();
+            await bleManager.writeCharacteristicWithResponseForDevice(
+              bluetooth_conf.device_id,
+              bluetooth_conf.service_id,
+              bluetooth_conf.char_id,
+              print_data
+            );               
+            await bleManager.writeCharacteristicWithResponseForDevice(
+              bluetooth_conf.device_id,
+              bluetooth_conf.service_id,
+              bluetooth_conf.char_id,
+              print_data);
+          }
+          bleManager.destroy()
+          setTimeout(() => {
+            setButtonDisable(false);
+            navigation.navigate('Admin');
+          }, 1000);
+        }
+        else{
+          setButtonDisable(false);
+          Toast.show({
+            ...toastConfig.error,
+            text1: response.message,
+          });
+        }
     }
   }
 
@@ -278,10 +274,19 @@ const AddDoff = () => {
     return { success: true }; 
   }
 
+  const warpDataLoad = async(doffinfo) =>{
+    const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: doffinfo.loom_detail.WorkOrderID }
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const datas = await getFromAPI('/get_beam_knotting_details?data=' + encodedFilterData)
+    dispatch(setWarpDetails(datas.beam_knotting[0].Warp));
+  }
+
   const handleSubmit = async () => {
     const newErrors = {};
     dispatch(setWarpDetails([]));
     dispatch(resetTableData());
+    dispatch(updateSelectedType({ index: 0, selectedType: {} }));
+    dispatch(updateSelectedType({ index: 1, selectedType: {} }));
     if (!docno) newErrors.docno = 'Document No is required';
     if (!date) newErrors.date = 'Date is required';
     if (!getLoomNo) newErrors.loomNo = 'Loom No is required';
@@ -292,6 +297,7 @@ const AddDoff = () => {
     if (buttonUse) if (!getBlueToothConfig) newErrors.BlueToothConfig = 'Printer is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
+
       if (!await validateRollNo()) {
         Toast.show({
           ...toastConfig.error,
@@ -299,6 +305,70 @@ const AddDoff = () => {
         });
         return;
       }
+
+      if(stat_RollDOffApprovedFirstRoll > 0){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Please Approve First Roll For: ' + selectedLoomNoDet.WorkOrderNo,
+        });
+        return;
+      }
+      
+      if (stat_ProductionMeterValidation.length > 0){
+        if (stat_ProductionMeterValidation[0][0] < doffMeter){
+          if (getRollType != 1007190){
+            Toast.show({
+              ...toastConfig.error,
+              text1: `You don't Have Meter To Production...`
+            });
+            return;
+          }
+        }
+      }
+      else{
+        Toast.show({
+          ...toastConfig.error,
+          text1: `This WorkOrderNo : ${selectedLoomNoDet.WorkOrderNo} Not Active`,
+        });
+        return;
+      }
+
+      const res = await getFromAPI('/get_setting')
+      if(res.setting[0].WeftActualCount > 0){
+        if (ischeckweftcount){
+          Toast.show({
+            ...toastConfig.error,
+            text1: 'Weft Count 0 not Allowed!',
+          });
+          return;
+        }
+      }
+
+      if (stat_ProductionMeterFirstRoll == 0 && getRollType != 1006195){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Production Qty is 0, This Roll Type Not Allowed!',
+        });
+        return;
+      }
+
+      if (getBeamDetails.length == 0){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Beam Details Not Having!',
+        });
+        return;
+      }
+
+      if (getWeftDetails.length == 0){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Weft Details Not Having!',
+        });
+        return;
+      }
+      
+
       const doffinfo = {
         docno, date, loom_detail: selectedLoomNoDet, BeamDetails: getBeamDetails,
         WeftDetails: getWeftDetails, RollType: getRollType, weightPerMtr: weightPerMtr, RollNo: getRollNo,
@@ -312,6 +382,7 @@ const AddDoff = () => {
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
             dispatch(resetQrData());
+            warpDataLoad(doffinfo);
             navigation.navigate('BeamKnotting', { doffinfo });
           }
           else{
@@ -330,11 +401,11 @@ const AddDoff = () => {
           }
         }
 
-
         else if (roll_type == 'Single Beam Knotting') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
+            warpDataLoad(doffinfo);
             navigation.navigate('SingleBeamKnotting', { doffinfo });
           }
           else{
@@ -358,6 +429,7 @@ const AddDoff = () => {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
+            warpDataLoad(doffinfo);
             navigation.navigate('LastRollSortChange', { doffinfo });
           }  
           else{
@@ -381,6 +453,7 @@ const AddDoff = () => {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
+            warpDataLoad(doffinfo);
             navigation.navigate('ScBc', { doffinfo });
           }  
           else{
@@ -391,10 +464,8 @@ const AddDoff = () => {
               });
             }
             else{
-              Toast.show({
-                ...toastConfig.error,
-                text1: 'Balance beam meter is not greater then 750',
-              });
+              dispatch(setdoffinfo(doffinfo));
+              navigation.navigate('ScBc', { doffinfo });
             }
           }
         }
@@ -517,7 +588,6 @@ const AddDoff = () => {
           <View style={styles.scrollContainer}>
             <View style={styles.row}>
               <View>
-
               </View>
               <PaperInput
                 label="Document No"
@@ -668,13 +738,13 @@ const AddDoff = () => {
               <BeamDetails getBeamDetails={getBeamDetails} doffMeter={doffMeter}/>
             </View>
             <View style={styles.row}>
-              <WeftDetails getWeftDetails={getWeftDetails} />
+              <WeftDetails getWeftDetails={getWeftDetails} selectedLoomNoDet={selectedLoomNoDet} setischeckweftcount={setischeckweftcount}/>
             </View>
             <Button
               icon="content-save"
               mode="contained"
               style={{ backgroundColor: colors.button, marginBottom: 20, borderRadius: 10 }}
-              disabled={loading}
+              disabled={ButtonDisable}
               onPress={handleSubmit}
             >
               {buttonUse ? 'Save' : 'Continue'}

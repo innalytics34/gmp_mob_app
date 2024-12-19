@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './auth/AuthContext';
 import AppNav from './navigation/AppNavigator'
@@ -9,10 +9,32 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from './auth/AuthContext';
 import { StatusBar } from 'react-native';
+import { getFromAPI } from './apicall/apicall';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const AppContent = () => {
-  const { user, loading } = useAuth();
+
+  const { user, loading, logout } = useAuth();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const userData = await AsyncStorage.getItem('user');
+      if(userData){
+        const res = await getFromAPI('/check_is_login'); 
+        if (res === 0) {
+            logout();
+            navigation.navigate('Login');
+        }
+      }
+    };
+    fetchData();
+    const intervalId = setInterval(fetchData, 60000);
+    return () => clearInterval(intervalId);
+}, []);
+
+
+
   // const initialRoute = user?.priv_id === 1
   //   ? 'Admin'
   //   : user?.priv_id === 2

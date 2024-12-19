@@ -1,4 +1,4 @@
-package com.arunsss.BlueTest
+package com.devorc.GMP
 
 import android.app.Application
 import android.content.res.Configuration

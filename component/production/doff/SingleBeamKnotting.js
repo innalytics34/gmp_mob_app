@@ -15,6 +15,7 @@ import { setWarpDetails } from './warpSlice';
 import { BleManager } from 'react-native-ble-plx';
 import { generatePrintData } from '../../bluetoothPrinter/generatePrintData'; 
 import { format } from 'date-fns';
+import { bluetoothconfig } from '../../bluetoothPrinter/bluetoothconfig';
 
 
 const BeamKnotting = () => {
@@ -28,6 +29,7 @@ const BeamKnotting = () => {
   const [docno, setdocno] = useState('AutoNumber');
   const [date, setdate] = useState(new Date().toISOString().split('T')[0]);
   const [getLoomNo, setLoomNo] = useState(doffinfo.loom_detail.value);
+  const warpDetailsInfo = useSelector(state => state.doffCommon.warpSelectedInfo);
   const [getLoomNoDp, setLoomNoDp] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -41,6 +43,7 @@ const BeamKnotting = () => {
  const [getBeamKnotting, setBeamKnotting] = useState([]);
  const [getBlueToothConfig, setBlueToothConfig] = useState(1);
  const [getBlueToothConfigList, setBlueToothConfigList] = useState([]);
+ const [ButtonDisable, setButtonDisable] = useState(false);
 
 
   useLayoutEffect(() => {
@@ -69,7 +72,12 @@ const BeamKnotting = () => {
       setShiftDp(response2.Shift)
       setLoomNoDp(response.document_info); 
       setWeftDetails(response3.beam_knotting[0].Weft)
-      dispatch(setWarpDetails(response3.beam_knotting[0].Warp));  
+      // const isSelectedTypeEmpty = () => {
+      //   return warpDetailsInfo.every(entry => Object.keys(entry.selectedType).length === 0);
+      // };
+      // if (warpDetails.length == 0 && isSelectedTypeEmpty()){
+      //   dispatch(setWarpDetails(response3.beam_knotting[0].Warp));
+      // }
       setBeamKnotting(response3.beam_knotting[0]); 
     } catch (error) {
       Alert.alert('Error', 'Failed to load filter data.');
@@ -104,24 +112,55 @@ const BeamKnotting = () => {
     setErrors((prevErrors) => ({ ...prevErrors, BlueToothConfig: '' }));
   }
 
+  const validateRollNo = async () => {
+    const data = { roll_no: doffinfo.RollNo };
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const count = await getFromAPI('/validate_roll_no?data=' + encodedFilterData);
+    return count == 0 ? true : false
+  }
+
   const handleLoomNoChange = async (selectedLoom) => {
     setLoomNo(selectedLoom);
     const selectedData = getLoomNoDp.find(item => item.value === selectedLoom);
     setSelectedLoomDet(selectedData)
-    const data = { UID: selectedData.UID, Description: selectedData.Description }
+    // const data = { UID: selectedData.UID, Description: selectedData.Description }
     // const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     // const response = await getFromAPI('/get_beam_weft_details?data=' + encodedFilterData);
-    const sampledata = [
-        {YarnMaterial: 'Cotton', Count: '50', End: '120',WarpBeamType: '0', BeamNo: '', EmptyBeamNo: '', SetNo: '', BeamMeter: '', WarpedYarn: '' },
-    ]
-    if (selectedData) {
-        dispatch(setWarpDetails(sampledata));
-    } else {
-        dispatch(setWarpDetails([]));
-    }
+    // const sampledata = [
+    //     {YarnMaterial: 'Cotton', Count: '50', End: '120',WarpBeamType: '0', BeamNo: '', EmptyBeamNo: '', SetNo: '', BeamMeter: '', WarpedYarn: '' },
+    // ]
+    // if (selectedData) {
+    //     dispatch(setWarpDetails(sampledata));
+    // } else {
+    //     dispatch(setWarpDetails([]));
+    // }
   };
 
-  const handleSubmit = async () => {
+
+  const handleConfirmSave = async (data) => {
+    setLoading(true);
+    const response = await postToAPI('/insert_doff_info', data);
+    setLoading(false);
+    if (response.rval > 0) {
+      Toast.show({
+        ...toastConfig.success,
+        text1: response.message,
+      });
+      setTimeout(() => {
+        setButtonDisable(false);
+        navigation.navigate('Admin');
+      }, 1000);
+    }
+    else {
+      setButtonDisable(false);
+      Toast.show({
+        ...toastConfig.error,
+        text1: response.message,
+      });
+    }
+  }
+
+const handleSubmit = async () => {
     const newErrors = {};
     if (!docno) newErrors.docno = 'Document No is required';
     if (!date) newErrors.date = 'Date is required';
@@ -132,146 +171,105 @@ const BeamKnotting = () => {
     if (!getBlueToothConfig) newErrors.BlueToothConfig = 'Printer is required';
     setErrors(newErrors);
     const data = {
-      beam_knotting: {ChangeType: getChangeType, Shift: getShift, docno, date, 
-        SortNo: getSortNo, WarpDetails:warpDetails, WeftDetails:getWeftDetails,
-        knotting_info :getBeamKnotting,  },
-      doffinfo: doffinfo, page_type:1}
-      if (Object.keys(newErrors).length === 0){
-        if (warpDetails[0].selectedType){
+      beam_knotting: {
+        ChangeType: getChangeType, Shift: getShift, docno, date,
+        SortNo: getSortNo, WarpDetails: warpDetails, WeftDetails: getWeftDetails,
+        knotting_info: getBeamKnotting,
+      },
+      doffinfo: doffinfo, page_type: 1
+    }
+    if (Object.keys(newErrors).length === 0) {
+      if (!await validateRollNo()) {
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Roll No Already Taken!',
+        });
+        return;
+      }
+
+      if (warpDetails.length == 2){
+        if(!warpDetails[1].selectedType){
+         Toast.show({
+           ...toastConfig.error,
+           text1: 'Please Add BeamNo, SetNo and Beam Meter!',
+         });
+         return;
+        }
+       }
+       
+
+      if (warpDetails[0].selectedType) {
+        setLoading(true);
+        setButtonDisable(true);
+        const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
+        const res = await bluetoothconfig(bluetooth_conf, setLoading);
+        if (res.val == 0) {
+          Alert.alert(
+            res.message,
+            `Are you sure to Save without print`,
+            [
+              {
+                text: "Cancel",
+                onPress: () => setButtonDisable(false),
+                style: "cancel"
+              },
+              {
+                text: "Save",
+                onPress: () => handleConfirmSave(data),
+              },
+            ],
+            { cancelable: false }
+          );
+        }
+        else {
           setLoading(true);
-          const bleManager = new BleManager();
-          const blueStat = await handleBluetoothState(bleManager);
-          if (blueStat == 'PoweredOn'){
-            const response = await postToAPI('/insert_doff_info', data);
+          const response = await postToAPI('/insert_doff_info', data);
           setLoading(false);
-          if (response.rval > 0){
+          if (response.rval > 0) {
             Toast.show({
               ...toastConfig.success,
               text1: response.message,
             });
-
-            const formattedDate = format(new Date(), 'hh:mm a');
-            const print_data =  generatePrintData(doffinfo.RollNo + ' M-' + String(doffinfo.DoffMeter) +  ' ' + formattedDate, '  ' + doffinfo.loom_detail.SortNo + ' B-' + doffinfo.loom_detail.BeamNo, doffinfo.RollNo)
-              const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
-              const isConnected = await bleManager.isDeviceConnected(bluetooth_conf.device_id);
-              if (!isConnected){
-                if (response.dataprint.length> 0){
-                  for (const item of response.dataprint) {
-                    const formattedDate1 = format(new Date(), 'hh:mm a');
-                    const print_data1 = generatePrintData(item.RollNo + ' M-' + String(doffinfo.DoffMeter) + ' ' + formattedDate1, ' ' + item.SortNo + ' B-' + doffinfo.loom_detail.BeamNo, item.RollNo);
-                    const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-                      await connected.discoverAllServicesAndCharacteristics();
-                    // Write the data to the printer for the current item
-                    await bleManager.writeCharacteristicWithResponseForDevice(
-                      bluetooth_conf.device_id,
-                      bluetooth_conf.service_id,
-                      bluetooth_conf.char_id,
-                      print_data1
-                    );
-                    
-                    // Write the data again (as per your original logic)
-                    await bleManager.writeCharacteristicWithResponseForDevice(
-                      bluetooth_conf.device_id,
-                      bluetooth_conf.service_id,
-                      bluetooth_conf.char_id,
-                      print_data1
-                    );
-                  }
-                  
-                  // After looping through all items, destroy the manager
-                  bleManager.destroy(); 
-              }
-              else{
-                const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-                await connected.discoverAllServicesAndCharacteristics();
-                await bleManager.writeCharacteristicWithResponseForDevice(
-                  bluetooth_conf.device_id,
-                  bluetooth_conf.service_id,
-                  bluetooth_conf.char_id,
-                  print_data
-                    );
-                  await bleManager.writeCharacteristicWithResponseForDevice(
-                    bluetooth_conf.device_id,
-                    bluetooth_conf.service_id,
-                    bluetooth_conf.char_id,
-                    print_data
-                      );    
-                bleManager.destroy()
-              }
-                
-            }
-            else {
+            const bleManager = new BleManager();
+            for (const item of response.dataprint) {
+              const formattedDate = format(new Date(), 'hh:mm a');
+              const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + formattedDate, ' ' + item.SortNo + ' B-' + item.BeamNumber, item.RollNo);
               const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-                await connected.discoverAllServicesAndCharacteristics();
-                if (response.dataprint.length> 0){
-                  for (const item of response.dataprint) {
-                    const formattedDate1 = format(new Date(), 'hh:mm a');
-                    const print_data1 = generatePrintData(item.RollNo + ' M-' + String(doffinfo.DoffMeter) + ' ' + formattedDate1, ' ' + item.SortNo + ' B-' + doffinfo.loom_detail.BeamNo, item.RollNo);
-                    const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-                    await connected.discoverAllServicesAndCharacteristics();
-                    // Write the data to the printer for the current item
-                    await bleManager.writeCharacteristicWithResponseForDevice(
-                      bluetooth_conf.device_id,
-                      bluetooth_conf.service_id,
-                      bluetooth_conf.char_id,
-                      print_data1
-                    );
-                    
-                    // Write the data again (as per your original logic)
-                    await bleManager.writeCharacteristicWithResponseForDevice(
-                      bluetooth_conf.device_id,
-                      bluetooth_conf.service_id,
-                      bluetooth_conf.char_id,
-                      print_data1
-                    );
-                  }
-                  
-                  // After looping through all items, destroy the manager
-                  bleManager.destroy(); 
-                }
-                else{
-                  await bleManager.writeCharacteristicWithResponseForDevice(
-                    bluetooth_conf.device_id,
-                    bluetooth_conf.service_id,
-                    bluetooth_conf.char_id,
-                    print_data
-                      );
-                  await bleManager.writeCharacteristicWithResponseForDevice(
-                    bluetooth_conf.device_id,
-                    bluetooth_conf.service_id,
-                    bluetooth_conf.char_id,
-                    print_data
-                      );    
-                  bleManager.destroy()
-                }
-                
+              await connected.discoverAllServicesAndCharacteristics();
+              await bleManager.writeCharacteristicWithResponseForDevice(
+                bluetooth_conf.device_id,
+                bluetooth_conf.service_id,
+                bluetooth_conf.char_id,
+                print_data
+              );
+              await bleManager.writeCharacteristicWithResponseForDevice(
+                bluetooth_conf.device_id,
+                bluetooth_conf.service_id,
+                bluetooth_conf.char_id,
+                print_data);
             }
+            bleManager.destroy()
             setTimeout(() => {
+              setButtonDisable(false);
               navigation.navigate('Admin');
-            }, 1500);
+            }, 1000);
           }
-          else{
+          else {
+            setButtonDisable(false);
             Toast.show({
               ...toastConfig.error,
               text1: response.message,
             });
           }
-          }
-          else{
-            Toast.show({
-              ...toastConfig.error,
-              text1: 'Turn ON Bluetooth to Print!',
-            });
-          }
-          
         }
-        else{
-          Toast.show({
-            ...toastConfig.error,
-            text1: 'Please Add BeamNo, SetNo and Beam Meter',
-          });
-        }
-        }
+      }
+      else {
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Please Add BeamNo, SetNo and Beam Meter',
+        });
+      }
+    }
   };
 
   const handleChangeType = (value) =>{
@@ -389,7 +387,7 @@ const BeamKnotting = () => {
           icon="content-save" 
           mode="contained" 
           style={{ backgroundColor: colors.button, marginBottom:20, borderRadius:10 }} 
-          disabled={loading}
+          disabled={ButtonDisable}
           onPress={handleSubmit}
         >
           Save

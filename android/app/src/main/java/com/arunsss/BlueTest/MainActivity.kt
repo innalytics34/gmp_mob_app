@@ -1,4 +1,4 @@
-package com.arunsss.BlueTest
+package com.devorc.GMP
 
 import android.os.Build
 import android.os.Bundle

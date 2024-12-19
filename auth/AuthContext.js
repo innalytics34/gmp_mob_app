@@ -34,8 +34,12 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem('user');
   };
 
+  const setipconfig = async (ipconfig) => {
+    await AsyncStorage.setItem('ipconfig', JSON.stringify(ipconfig));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setipconfig }}>
       {children}
     </AuthContext.Provider>
   );

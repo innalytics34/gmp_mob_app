@@ -11,17 +11,27 @@ import { useDispatch } from 'react-redux';
 import { resetQrData } from '../barcodescan/QrSlice.tsx';
 import { resetSavedData } from './weftissue/savedDataSlice'; 
 import TestPrinter from '../bluetoothPrinter/BluetoothPrinter';
+import { postToAPI } from '../../apicall/apicall';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { user, logout } = useAuth();
   const dispatch = useDispatch();
   const [menuVisible, setMenuVisible] = useState(false);
+  
 
-  const handleLogout = () => {
-    setMenuVisible(false);
-    logout();
-    navigation.navigate('Login');
+  const handleLogout = async() => {
+    try{
+      await postToAPI('/put_logout', {});
+      setMenuVisible(false);
+      logout();
+      navigation.navigate('Login');
+    }
+    catch{
+      setMenuVisible(false);
+      navigation.navigate('Login');
+    }
+   
   };
 
   const requestNearbyDevicePermissions = async () => {
