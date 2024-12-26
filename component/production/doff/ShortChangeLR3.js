@@ -202,7 +202,6 @@ const BeamKnotting = () => {
          }
         }
         if (warpDetails[0].selectedType){
-          setLoading(true);
           setButtonDisable(true);
           const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
           const res = await bluetoothconfig(bluetooth_conf, setLoading);

@@ -137,7 +137,7 @@ const AddDoff = () => {
     const data = {WorkOrderID: selectedData.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     const response = await getFromAPI('/stat_ProductionMeterFirstRoll?data=' + encodedFilterData);
-    setstat_ProductionMeterFirstRoll(response.count);
+    setstat_ProductionMeterFirstRoll(response.value);
   } 
 
   const handleLoomNoChange = async (selectedLoom) => {
@@ -271,7 +271,10 @@ const AddDoff = () => {
     }
   }
 
-  function checkBalanceBeam(data, type) {
+  function checkBalanceBeam(data, type, CrimpValidate) {
+    if (CrimpValidate == 2){
+      return { success: true }
+    }
     for (let item of data) {
       const result = item.BalanceBeamMeter - doffMeter;
       if (result < 0 || result > 750 && type == 1) {
@@ -380,7 +383,7 @@ const AddDoff = () => {
 
       const encodedCrimpValidateData = encodeURIComponent(JSON.stringify(CrimpValidateData));
       const CrimpValidate = await getFromAPI('/stat_WorkOrderWarpCrimp?data=' + encodedCrimpValidateData)
-      if (CrimpValidate.CrimpValidate){
+      if (CrimpValidate.CrimpValidate == 0){
         Toast.show({
           ...toastConfig.error,
           text1: CrimpValidate.message,
@@ -396,7 +399,6 @@ const AddDoff = () => {
           });
           return;
       }
-
 
       if (stat_ProductionMeterFirstRoll == 0 && getRollType != 1006195){
         Toast.show({
@@ -441,7 +443,7 @@ const AddDoff = () => {
       if (selectedData) {
         const roll_type = selectedData.Description
         if (roll_type == 'Beam Knotting') {
-          const bal_beam_stat =  checkBalanceBeam(getBeamDetails, 1);
+          const bal_beam_stat =  checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate);
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
             dispatch(resetQrData());
@@ -465,7 +467,7 @@ const AddDoff = () => {
         }
 
         else if (roll_type == 'Single Beam Knotting') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
@@ -489,7 +491,7 @@ const AddDoff = () => {
 
 
         else if (roll_type == 'Last Roll SortChange') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
@@ -513,7 +515,7 @@ const AddDoff = () => {
 
 
         else if (roll_type == 'Sort Change & Beam Change') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
@@ -535,7 +537,7 @@ const AddDoff = () => {
 
 
         else if (roll_type == 'Checking Roll') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             handleSave(doffinfo);
           }
@@ -558,7 +560,7 @@ const AddDoff = () => {
 
 
         else if (roll_type == 'First Roll') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             handleSave(doffinfo);
           }
@@ -580,7 +582,7 @@ const AddDoff = () => {
 
 
         else if (roll_type == 'Normal') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             handleSave(doffinfo);
           }
@@ -601,7 +603,7 @@ const AddDoff = () => {
         }
 
         else if (roll_type == 'Sample Roll') {
-          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0)
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success){
             handleSave(doffinfo);
           }

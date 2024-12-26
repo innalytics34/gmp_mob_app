@@ -21,10 +21,6 @@ export const toastConfig = {
       text1Style: {
         color: '#366b36',
       },
-      textStyle: {
-      
-        flexWrap: 'wrap', 
-      },
       visibilityTime: 1000,
       autoHide: true,
       topOffset: 30,
@@ -45,8 +41,7 @@ export const toastConfig = {
       autoHide: true,
       topOffset: 30,
       textStyle: {
-        numberOfLines: 5,
-        flexWrap: 'wrap', 
+        numberOfLines: 2,
       },
       style: {
         backgroundColor: colors.error,
