@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 const WarpDetails = ({ loom_detail }) => {
     const dispatch = useDispatch();
     const navigation = useNavigation();
+    const doffinfo = useSelector((state) => state.doffCommon.doffinfo);
     const qrData = useSelector(state => state.QRData.data);
     const [WarpBeamTypeOptions, setWarpBeamTypeOptions] = useState([]);
     const warpDetails = useSelector(state => state.warpDetails.warpDetails);
@@ -87,7 +88,12 @@ const WarpDetails = ({ loom_detail }) => {
             Ends: item.Ends,
             YarnMaterial_UID: item.YarnMaterial_UID,
             WorkOrderID: loom_detail.WorkOrderID,
-            Description: loom_detail.Description
+            Description: loom_detail.Description,
+            doffmeter: doffinfo.DoffMeter,
+            StockID: doffinfo.BeamDetails?.map(item => item.StockID)[0] || 0,
+            StockID1: doffinfo.BeamDetails?.map(item => item.StockID)[1] || 0,
+            roll_type: doffinfo.RollType
+
         };
         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
         const response = await getFromAPI('get_select_filled_beam?data=' + encodedFilterData);
@@ -103,7 +109,11 @@ const WarpDetails = ({ loom_detail }) => {
             Ends: item.Ends,
             YarnMaterial_UID: item.YarnMaterial_UID,
             WorkOrderID: loom_detail.WorkOrderID,
-            Description: loom_detail.Description
+            Description: loom_detail.Description,
+            doffmeter: doffinfo.DoffMeter,
+            StockID: doffinfo.BeamDetails?.map(item => item.StockID)[0] || 0,
+            StockID1: doffinfo.BeamDetails?.map(item => item.StockID)[1] || 0,
+            roll_type: doffinfo.RollType
         };
         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
         const response = await getFromAPI('get_select_filled_beam?data=' + encodedFilterData);

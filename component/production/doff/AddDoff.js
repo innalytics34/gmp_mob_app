@@ -24,6 +24,7 @@ import { setdoffinfo } from '../doff/commonSlice';
 import {resetQrData} from '../../barcodescan/QrSlice';
 import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
 import { setwarpInfo, updateSelectedType } from '../doff/commonSlice';
+import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
 
 
 const AddDoff = () => {
@@ -171,6 +172,15 @@ const AddDoff = () => {
 
   
   const handleConfirmSave = async(doffinfo)=>{
+    const signalresponse = await getCurrentWifiSignalStrength();
+                if (signalresponse.rval == 0){
+                  Toast.show({
+                    ...toastConfig.error,
+                    text1: signalresponse.message,
+                  });
+                  setButtonDisable(false);
+                 return;
+                }
     setLoading(true);
     const data = { doffinfo, page_type: 0 }
     const response = await postToAPI('/insert_doff_info', data);
@@ -274,6 +284,13 @@ const AddDoff = () => {
     return { success: true }; 
   }
 
+  function checkValueIsNumber(value) {
+    if (isNaN(parseFloat(value)) || value == "0") {
+      return false; 
+    }
+    return true; 
+  }
+
   const warpDataLoad = async(doffinfo) =>{
     const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: doffinfo.loom_detail.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
@@ -282,6 +299,16 @@ const AddDoff = () => {
   }
 
   const handleSubmit = async () => {
+
+    const signalresponse = await getCurrentWifiSignalStrength();
+    if (signalresponse.rval == 0){
+      Toast.show({
+        ...toastConfig.error,
+        text1: signalresponse.message,
+      });
+      setButtonDisable(false);
+     return;
+    }
     const newErrors = {};
     dispatch(setWarpDetails([]));
     dispatch(resetTableData());
@@ -344,6 +371,33 @@ const AddDoff = () => {
         }
       }
 
+      const CrimpValidateData = {
+        WorkOrderID: selectedLoomNoDet.WorkOrderID,
+        BeamMeter: selectedLoomNoDet.BeamMeter,
+          roll_type: getRollType,
+           balbeam_meter: selectedLoomNoDet.BalanceMeter
+          }
+
+      const encodedCrimpValidateData = encodeURIComponent(JSON.stringify(CrimpValidateData));
+      const CrimpValidate = await getFromAPI('/stat_WorkOrderWarpCrimp?data=' + encodedCrimpValidateData)
+      if (CrimpValidate.CrimpValidate){
+        Toast.show({
+          ...toastConfig.error,
+          text1: CrimpValidate.message,
+        });
+        return;
+      }
+     
+
+      if(res.setting[0].DoffMeterMinLimit > doffMeter){
+          Toast.show({
+            ...toastConfig.error,
+            text1: `The Doff Meter needs to be greater then ${res.setting[0].DoffMeterMinLimit}.`,
+          });
+          return;
+      }
+
+
       if (stat_ProductionMeterFirstRoll == 0 && getRollType != 1006195){
         Toast.show({
           ...toastConfig.error,
@@ -364,6 +418,15 @@ const AddDoff = () => {
         Toast.show({
           ...toastConfig.error,
           text1: 'Weft Details Not Having!',
+        });
+        return;
+      }
+
+      const ischeckDoffMeter = checkValueIsNumber(doffMeter);
+      if(!ischeckDoffMeter){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Enter Valid Doff Meter',
         });
         return;
       }

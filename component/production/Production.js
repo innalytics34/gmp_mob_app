@@ -13,6 +13,7 @@ import { resetSavedData } from './weftissue/savedDataSlice';
 import TestPrinter from '../bluetoothPrinter/BluetoothPrinter';
 import { postToAPI } from '../../apicall/apicall';
 
+
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { user, logout } = useAuth();

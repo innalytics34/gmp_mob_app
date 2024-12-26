@@ -16,6 +16,7 @@ import { BleManager } from 'react-native-ble-plx';
 import { generatePrintData } from '../../bluetoothPrinter/generatePrintData'; 
 import { format } from 'date-fns';
 import { bluetoothconfig } from '../../bluetoothPrinter/bluetoothconfig';
+import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
 
 
 const BeamKnotting = () => {
@@ -127,6 +128,15 @@ const BeamKnotting = () => {
   }
 
   const handleConfirmSave = async (data) => {
+    const signalresponse = await getCurrentWifiSignalStrength();
+            if (signalresponse.rval == 0){
+              Toast.show({
+                ...toastConfig.error,
+                text1: signalresponse.message,
+              });
+              setButtonDisable(false);
+             return;
+            }
     setLoading(true);
     const response = await postToAPI('/insert_doff_info', data);
     setLoading(false);
@@ -151,6 +161,15 @@ const BeamKnotting = () => {
 
 
   const handleSubmit = async () => {
+    const signalresponse = await getCurrentWifiSignalStrength();
+            if (signalresponse.rval == 0){
+              Toast.show({
+                ...toastConfig.error,
+                text1: signalresponse.message,
+              });
+              setButtonDisable(false);
+             return;
+            }
     const newErrors = {};
     if (!docno) newErrors.docno = 'Document No is required';
     if (!date) newErrors.date = 'Date is required';
