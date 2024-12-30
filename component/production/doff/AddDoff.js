@@ -288,10 +288,10 @@ const AddDoff = () => {
   }
 
   function checkValueIsNumber(value) {
-    if (isNaN(parseFloat(value)) || value == "0") {
-      return false; 
+    if (isNaN(parseFloat(value)) || value === "0" || /[.,+-]/.test(value)) {
+      return false;
     }
-    return true; 
+    return true;
   }
 
   const warpDataLoad = async(doffinfo) =>{
@@ -530,6 +530,7 @@ const AddDoff = () => {
             }
             else{
               dispatch(setdoffinfo(doffinfo));
+              warpDataLoad(doffinfo);
               navigation.navigate('ScBc', { doffinfo });
             }
           }
