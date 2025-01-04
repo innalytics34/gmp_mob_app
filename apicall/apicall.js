@@ -2,21 +2,22 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-const API_BASE_URL = "http://192.168.226.218:813/GMPMob";
+const API_BASE_URL = "http://192.168.50.55:813/GMPMob";
 
 const getipconfig = (ipconfig)=>{
-  if (JSON.parse(ipconfig)){
-    if (JSON.parse(ipconfig).ip_config.length > 0){
-      return `http://${JSON.parse(ipconfig).ip_config[0].ip}:813/GMPMob`
-      // return API_BASE_URL
-    }
-    else{
-      return API_BASE_URL
-    }
-  }
-  else{
-    return API_BASE_URL
-  }
+  // if (JSON.parse(ipconfig)){
+  //   if (JSON.parse(ipconfig).ip_config.length > 0){
+  //     // return `http://${JSON.parse(ipconfig).ip_config[0].ip}:813/GMPMob`
+  //     return API_BASE_URL
+  //   }
+  //   else{
+  //     return API_BASE_URL
+  //   }
+  // }
+  // else{
+  //   return API_BASE_URL
+  // }
+  return API_BASE_URL
 }
 const createAxiosInstance = async () => {
   let token = '';

@@ -25,12 +25,12 @@ const LoginScreen = () => {
     setLoading(true);
     try {
 
-      const ipconfig = await axios.get('https://demomisapi.azurewebsites.net/gmp/get_gmpapiipconfig', {
-        headers: {
-            'accept': 'application/json', 
-        }
-      });
-      setipconfig(ipconfig.data)
+      // const ipconfig = await axios.get('https://demomisapi.azurewebsites.net/gmp/get_gmpapiipconfig', {
+      //   headers: {
+      //       'accept': 'application/json', 
+      //   }
+      // });
+      // setipconfig(ipconfig.data)
       const [response, response1] = await Promise.all([
         getFromAPI('/get_userlist'),
         getFromAPI('/get_setting'),
@@ -53,6 +53,26 @@ const LoginScreen = () => {
     return getAppVersion === '1.0.3';
   };
 
+  const forcelogoutLogin = async () =>{
+    const res = await postToAPI('/put_forcelogout', {username:email});
+    if (res.rval > 0 ){
+      Toast.show({
+        ...toastConfig.success,
+        text1: res.message,
+      });
+      return;
+    }
+    else{
+      Toast.show({
+        ...toastConfig.error,
+        text1: res.message,
+      });
+      return;
+    }
+    
+
+  }
+
   const handleLogin = async () => {
     setLoading(true);
     const newErrors = {};
@@ -73,7 +93,7 @@ const LoginScreen = () => {
         setLoading(true);
         const result = await postToAPI('/login', data);
         setLoading(false);
-        if (result.rval > 0) {
+        if (result.rval == 1) {
           const userData = {
             token: result.token,
             is_login: 'true',
@@ -81,7 +101,26 @@ const LoginScreen = () => {
             user_id: String(result.user_id),
           };
           login(userData);
-        } else {
+        }
+        else if (result.rval == 2){
+          Alert.alert(
+            "User Already Logged In with Another Device", 
+            `It seems you're already logged in on another device. Please log out from the other device if you wish to continue.`,
+            [
+              { 
+                text: "Cancel", 
+                onPress: () => setButtonDisable(false),  
+                style: "cancel"
+              },
+              { 
+                text: "Logout", 
+                onPress: () => forcelogoutLogin(result), 
+              },
+            ],
+            { cancelable: false }  
+          );
+        }
+         else {
           Toast.show({
             ...toastConfig.error,
             text1: result.message,

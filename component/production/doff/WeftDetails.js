@@ -14,6 +14,9 @@ const WeftDetails = ({ getWeftDetails, selectedLoomNoDet, setischeckweftcount })
     if (count == 0){
       setischeckweftcount(true);
     }
+    else{
+      setischeckweftcount(false);
+    }
     return count || 0; 
   };
 
@@ -26,7 +29,7 @@ const WeftDetails = ({ getWeftDetails, selectedLoomNoDet, setischeckweftcount })
       setWeftCounts(counts);
     };
 
-    if (getWeftDetails.length) {
+    if (getWeftDetails.length > 0) {
       fetchWeftCounts();
     }
   }, [getWeftDetails, selectedLoomNoDet]);
@@ -53,7 +56,7 @@ const WeftDetails = ({ getWeftDetails, selectedLoomNoDet, setischeckweftcount })
                 <Text style={styles.cellText}>
                   {weftCounts[item.Item_UID] !== undefined
                     ? weftCounts[item.Item_UID]
-                    : 'Loading...'}
+                    : '0'}
                 </Text>
               </DataTable.Cell>
               <DataTable.Cell style={styles.cell}>

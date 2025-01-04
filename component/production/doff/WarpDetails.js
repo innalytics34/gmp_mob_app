@@ -92,7 +92,9 @@ const WarpDetails = ({ loom_detail }) => {
             doffmeter: doffinfo.DoffMeter,
             StockID: doffinfo.BeamDetails?.map(item => item.StockID)[0] || 0,
             StockID1: doffinfo.BeamDetails?.map(item => item.StockID)[1] || 0,
-            roll_type: doffinfo.RollType
+            roll_type: doffinfo.RollType, 
+            WarpBeamType : item.WarpBeamType,
+            shortchangeID : loom_detail.UID
 
         };
         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
@@ -113,7 +115,9 @@ const WarpDetails = ({ loom_detail }) => {
             doffmeter: doffinfo.DoffMeter,
             StockID: doffinfo.BeamDetails?.map(item => item.StockID)[0] || 0,
             StockID1: doffinfo.BeamDetails?.map(item => item.StockID)[1] || 0,
-            roll_type: doffinfo.RollType
+            roll_type: doffinfo.RollType,
+            WarpBeamType : item.WarpBeamType,
+            shortchangeID : loom_detail.UID
         };
         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
         const response = await getFromAPI('get_select_filled_beam?data=' + encodedFilterData);

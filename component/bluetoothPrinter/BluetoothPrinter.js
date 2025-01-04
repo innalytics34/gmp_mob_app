@@ -66,9 +66,9 @@ export default function App() {
     const bleManager = new BleManager();
     const blueStat = await handleBluetoothState(bleManager);
     if (blueStat == 'PoweredOn'){
-      const formattedDate = format(new Date(), 'hh:mm a');
+      const formattedDate = format(new Date(), 'hh:mma');
       const print_data =  generatePrintData(
-        'TestPrint-1' + ' M-' + String(1000) +  ' ' + formattedDate, '  ' + 'Test' + ' B-' + '0000', 'Test')
+        'Test09-B998-1' + ' M-' + String(1000) +  ' ' + 'Single Knotting','GP-688661' + ' B-' + '000000,000000 ' + formattedDate, 'Test', 0)
       const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
       const isConnected = await bleManager.isDeviceConnected(bluetooth_conf.device_id);
       if (!isConnected){

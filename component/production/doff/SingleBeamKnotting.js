@@ -250,9 +250,9 @@ const handleSubmit = async () => {
               text1: response.message,
             });
             const bleManager = new BleManager();
-            for (const item of response.dataprint) {
+            for (const [index, item] of response.dataprint.entries()) {
               const formattedDate = format(new Date(), 'hh:mm a');
-              const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + formattedDate, ' ' + item.SortNo + ' B-' + item.BeamNumber, item.RollNo);
+              const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + item.roll_type_sortcode, ' ' + item.SortNo + ' B-' + item.BeamNumber + ' ' + formattedDate, item.RollNo, index);
               const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
               await connected.discoverAllServicesAndCharacteristics();
               await bleManager.writeCharacteristicWithResponseForDevice(
