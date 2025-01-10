@@ -23,6 +23,14 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
   const tableHead = ['', 'LotNo', 'StockCone', 'ConeWeight', 'StockQty', 'IssueCone', 'IssueQty'];
   const widthArr = [35, 100, 100, 100, 100, 120, 140];
 
+
+  useEffect(() => {
+    // console.log(savedData, "--999")
+    const checkedItems = savedData.map(item => item.QRCode);
+    // console.log(checkedItems,"------------------start1")
+    setSelectedItems(checkedItems);
+  }, [savedData]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (qrData && qrData !== '' && qrData !== null) {
@@ -34,10 +42,14 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
             text1: 'QR Already Taken!',
           });
         } else {
+          console.log(qrData, "------------ci")
           const data = { ItemDescriptionUID: getItemDescription, LocationID: 1006297, QRCode: qrData };
           const encodedFilterData = encodeURIComponent(JSON.stringify(data));
           const response = await getFromAPI(`/get_weft_issue_details?data=${encodedFilterData}`);
           if (response && response.WeftIssueDetails.length > 0){
+            // console.log(selectedItems, "========-----l")
+            const isAlreadyScanned = savedData.some(item => item.QRCode === qrData);
+            //  console.log(isAlreadyScanned, "---------cfff")
             dispatch(appendSavedData(response.WeftIssueDetails));
             dispatch(resetQrData());
             Toast.show({
@@ -46,6 +58,7 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
             });
           }
           else{
+            console.log(qrData, 'Please Scan-----------')
             Toast.show({
               ...toastConfig.error,
               text1: 'Please Scan Valid QR',
@@ -60,10 +73,6 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
     fetchData();
   }, [qrData, getItemDescription]);
 
-  useEffect(() => {
-    const checkedItems = savedData.map(item => item.QRCode);
-    setSelectedItems(checkedItems);
-  }, [savedData]);
 
   const handleShowDp = async () => {
     const err = checkInput();
@@ -72,6 +81,8 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
       const data = { ItemDescriptionUID: getItemDescription, LocationID: 1006297, QRCode: qrData };
       const encodedFilterData = encodeURIComponent(JSON.stringify(data));
       const response = await getFromAPI(`/get_weft_issue_details?data=${encodedFilterData}`);
+      // const output = response.WeftIssueDetails.map(item => ({a: item.QRCode}));
+      // console.log(output, "--------cfds")
       setWIList(response.WeftIssueDetails);
     }
   };

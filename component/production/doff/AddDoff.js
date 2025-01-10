@@ -18,13 +18,13 @@ import { postToAPI } from '../../../apicall/apicall';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
 import { BleManager } from 'react-native-ble-plx';
-import { generatePrintData } from '../../bluetoothPrinter/generatePrintData'; 
+import { generatePrintData } from '../../bluetoothPrinter/generatePrintData';
 import { format } from 'date-fns';
 import { setdoffinfo } from '../doff/commonSlice';
-import {resetQrData} from '../../barcodescan/QrSlice';
-import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
+import { resetQrData } from '../../barcodescan/QrSlice';
+import { bluetoothconfig } from '../../bluetoothPrinter/bluetoothconfig';
 import { setwarpInfo, updateSelectedType } from '../doff/commonSlice';
-import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
+import { getCurrentWifiSignalStrength, CurrentWifiSignalStrength } from '../../checkNetworkStatus';
 
 
 const AddDoff = () => {
@@ -56,15 +56,35 @@ const AddDoff = () => {
   const [ButtonDisable, setButtonDisable] = useState(false);
   const [ischeckweftcount, setischeckweftcount] = useState(false);
   const [stat_ProductionMeterFirstRoll, setstat_ProductionMeterFirstRoll] = useState(0);
+  const [getWifiSignal, setWifiSignal] = useState(0);
+
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const signalresponse = await CurrentWifiSignalStrength();
+      setWifiSignal(signalresponse);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [])
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Doff Info</Text>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+          <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Doff Info</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="wifi" size={20} color="#bfffcf" style={{ marginRight: 5 }} />
+            <Text style={{ color: '#f66d5e', fontWeight: 'bold', fontSize: 12, opacity: 1.5 }}>
+              {getWifiSignal} dBm
+            </Text>
+          </View>
+        </View>
+
       ),
       headerStyle: { backgroundColor: colors.header },
     });
-  }, [navigation]);
+  }, [navigation, getWifiSignal]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -94,21 +114,21 @@ const AddDoff = () => {
   useEffect(() => {
     setLoading(true);
     if (Array.isArray(getLoomNoDp)) {
-          if (qrDataDoff != null && getLoomNoDp.length > 0 &&  qrDataDoff.length < 7){
-            const result = getLoomNoDp.find(item => item.Description === qrDataDoff);
-            if (result) {
-              setIshideloomDp(true);
-              setLoomNo(result.value); 
-            } else {
-              Toast.show({
-                ...toastConfig.error,
-                text1: 'QR Code Data not Found',
-              });
-              setIshideloomDp(false);
-            }
-          }  
-        } 
-        setLoading(false);
+      if (qrDataDoff != null && getLoomNoDp.length > 0 && qrDataDoff.length < 7) {
+        const result = getLoomNoDp.find(item => item.Description === qrDataDoff);
+        if (result) {
+          setIshideloomDp(true);
+          setLoomNo(result.value);
+        } else {
+          Toast.show({
+            ...toastConfig.error,
+            text1: 'QR Code Data not Found',
+          });
+          setIshideloomDp(false);
+        }
+      }
+    }
+    setLoading(false);
   }, [getLoomNo, qrDataDoff]);
 
   const onDateChange = (event, date) => {
@@ -119,26 +139,26 @@ const AddDoff = () => {
     }
   };
 
-  const get_stat_ProductionMeterValidation = async(selectedData)=>{
-    const data = {WorkOrderID: selectedData.WorkOrderID }
+  const get_stat_ProductionMeterValidation = async (selectedData) => {
+    const data = { WorkOrderID: selectedData.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     const response = await getFromAPI('/stat_ProductionMeterValidation?data=' + encodedFilterData);
     setstat_ProductionMeterValidation(response.value);
   }
 
-  const get_stat_RollDOffApprovedFirstRoll = async(selectedData)=>{
-    const data = {WorkOrderID: selectedData.WorkOrderID }
+  const get_stat_RollDOffApprovedFirstRoll = async (selectedData) => {
+    const data = { WorkOrderID: selectedData.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     const response = await getFromAPI('/stat_RollDOffApprovedFirstRoll?data=' + encodedFilterData);
     setstat_RollDOffApprovedFirstRoll(response.count);
-  } 
+  }
 
-  const get_stat_ProductionMeterFirstRoll = async(selectedData)=>{
-    const data = {WorkOrderID: selectedData.WorkOrderID }
+  const get_stat_ProductionMeterFirstRoll = async (selectedData) => {
+    const data = { WorkOrderID: selectedData.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     const response = await getFromAPI('/stat_ProductionMeterFirstRoll?data=' + encodedFilterData);
     setstat_ProductionMeterFirstRoll(response.value);
-  } 
+  }
 
   const handleLoomNoChange = async (selectedLoom) => {
     setErrors((prevErrors) => ({ ...prevErrors, loomNo: '' }));
@@ -170,121 +190,121 @@ const AddDoff = () => {
     return count == 0 ? true : false
   }
 
-  
-  const handleConfirmSave = async(doffinfo)=>{
+
+  const handleConfirmSave = async (doffinfo) => {
     const signalresponse = await getCurrentWifiSignalStrength();
-                if (signalresponse.rval == 0){
-                  Toast.show({
-                    ...toastConfig.error,
-                    text1: signalresponse.message,
-                  });
-                  setButtonDisable(false);
-                 return;
-                }
+    if (signalresponse.rval == 0) {
+      Toast.show({
+        ...toastConfig.error,
+        text1: signalresponse.message,
+      });
+      setButtonDisable(false);
+      return;
+    }
     setLoading(true);
     const data = { doffinfo, page_type: 0 }
     const response = await postToAPI('/insert_doff_info', data);
-        setLoading(false);
-        if (response.rval > 0) {
-          Toast.show({
-            ...toastConfig.success,
-            text1: response.message,
-          });
-          setTimeout(() => {
-            setButtonDisable(false);
-            navigation.navigate('Admin');
-          }, 1000);
-        }
-        else{
-          setButtonDisable(false);
-          Toast.show({
-            ...toastConfig.error,
-            text1: response.message,
-          });
-        }
-     }
+    setLoading(false);
+    if (response.rval > 0) {
+      Toast.show({
+        ...toastConfig.success,
+        text1: response.message,
+      });
+      setTimeout(() => {
+        setButtonDisable(false);
+        navigation.navigate('Admin');
+      }, 1000);
+    }
+    else {
+      setButtonDisable(false);
+      Toast.show({
+        ...toastConfig.error,
+        text1: response.message,
+      });
+    }
+  }
 
 
   const handleSave = async (doffinfo) => {
     setButtonDisable(true);
     const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
-    const res = await bluetoothconfig(bluetooth_conf, setLoading) ;
+    const res = await bluetoothconfig(bluetooth_conf, setLoading);
     if (res.val == 0) {
       Alert.alert(
-       res.message, 
-        `Are you sure to Save without print`, 
+        res.message,
+        `Are you sure to Save without print`,
         [
-          { 
-            text: "Cancel", 
-            onPress: () =>  setButtonDisable(false), 
+          {
+            text: "Cancel",
+            onPress: () => setButtonDisable(false),
             style: "cancel"
           },
-          { 
-            text: "Save", 
-            onPress: () => handleConfirmSave(doffinfo), 
+          {
+            text: "Save",
+            onPress: () => handleConfirmSave(doffinfo),
           },
         ],
-        { cancelable: false } 
+        { cancelable: false }
       );
     }
-    else{
+    else {
       setLoading(true);
       const data = { doffinfo, page_type: 0 }
       const response = await postToAPI('/insert_doff_info', data);
-        setLoading(false);
-        if (response.rval > 0) {
-          Toast.show({
-            ...toastConfig.success,
-            text1: response.message,
-          });
-          const bleManager = new BleManager();
-          for (const [index, item] of response.dataprint.entries()) {
-            const formattedDate = format(new Date(), 'hh:mm a');
-            const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + item.roll_type_sortcode, item.SortNo + ' B-' + item.BeamNumber + ' ' + formattedDate, item.RollNo, index);
-            const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-            await connected.discoverAllServicesAndCharacteristics();
-            await bleManager.writeCharacteristicWithResponseForDevice(
-              bluetooth_conf.device_id,
-              bluetooth_conf.service_id,
-              bluetooth_conf.char_id,
-              print_data
-            );               
-            await bleManager.writeCharacteristicWithResponseForDevice(
-              bluetooth_conf.device_id,
-              bluetooth_conf.service_id,
-              bluetooth_conf.char_id,
-              print_data);
-          }
-          bleManager.destroy()
-          setTimeout(() => {
-            setButtonDisable(false);
-            navigation.navigate('Admin');
-          }, 1000);
+      setLoading(false);
+      if (response.rval > 0) {
+        Toast.show({
+          ...toastConfig.success,
+          text1: response.message,
+        });
+        const bleManager = new BleManager();
+        for (const [index, item] of response.dataprint.entries()) {
+          const formattedDate = format(new Date(), 'hh:mm a');
+          const print_data = generatePrintData(item.RollNo + ' M-' + String(item.DoffMeter) + ' ' + item.roll_type_sortcode, item.SortNo + ' B-' + item.BeamNumber + ' ' + formattedDate, item.RollNo, index);
+          const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
+          await connected.discoverAllServicesAndCharacteristics();
+          await bleManager.writeCharacteristicWithResponseForDevice(
+            bluetooth_conf.device_id,
+            bluetooth_conf.service_id,
+            bluetooth_conf.char_id,
+            print_data
+          );
+          await bleManager.writeCharacteristicWithResponseForDevice(
+            bluetooth_conf.device_id,
+            bluetooth_conf.service_id,
+            bluetooth_conf.char_id,
+            print_data);
         }
-        else{
+        bleManager.destroy()
+        setTimeout(() => {
           setButtonDisable(false);
-          Toast.show({
-            ...toastConfig.error,
-            text1: response.message,
-          });
-        }
+          navigation.navigate('Admin');
+        }, 1000);
+      }
+      else {
+        setButtonDisable(false);
+        Toast.show({
+          ...toastConfig.error,
+          text1: response.message,
+        });
+      }
     }
   }
 
   function checkBalanceBeam(data, type, CrimpValidate) {
-    if (CrimpValidate == 2){
+    if (CrimpValidate == 2) {
       return { success: true }
     }
     for (let item of data) {
       const result = item.BalanceBeamMeter - doffMeter;
       if (result < 0 || result > 750 && type == 1) {
-        return { success: false, result };  
+        return { success: false, result };
       }
       if (result < 0 && type == 0) {
-        return { success: false, result };  
+        return { success: false, result };
       }
     }
-    return { success: true }; 
+    return { success: true };
   }
 
   function checkValueIsNumber(value) {
@@ -294,7 +314,7 @@ const AddDoff = () => {
     return true;
   }
 
-  const warpDataLoad = async(doffinfo) =>{
+  const warpDataLoad = async (doffinfo) => {
     const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: doffinfo.loom_detail.WorkOrderID }
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
     const datas = await getFromAPI('/get_beam_knotting_details?data=' + encodedFilterData)
@@ -304,13 +324,13 @@ const AddDoff = () => {
   const handleSubmit = async () => {
 
     const signalresponse = await getCurrentWifiSignalStrength();
-    if (signalresponse.rval == 0){
+    if (signalresponse.rval == 0) {
       Toast.show({
         ...toastConfig.error,
         text1: signalresponse.message,
       });
       setButtonDisable(false);
-     return;
+      return;
     }
     const newErrors = {};
     dispatch(setWarpDetails([]));
@@ -336,17 +356,17 @@ const AddDoff = () => {
         return;
       }
 
-      if(stat_RollDOffApprovedFirstRoll > 0){
+      if (stat_RollDOffApprovedFirstRoll > 0) {
         Toast.show({
           ...toastConfig.error,
           text1: 'Please Approve First Roll For: ' + selectedLoomNoDet.WorkOrderNo,
         });
         return;
       }
-      
-      if (stat_ProductionMeterValidation.length > 0){
-        if (stat_ProductionMeterValidation[0][0] < doffMeter){
-          if (getRollType != 1007190){
+
+      if (stat_ProductionMeterValidation.length > 0) {
+        if (stat_ProductionMeterValidation[0][0] < doffMeter) {
+          if (getRollType != 1007190) {
             Toast.show({
               ...toastConfig.error,
               text1: `You don't Have Meter To Production...`
@@ -355,7 +375,7 @@ const AddDoff = () => {
           }
         }
       }
-      else{
+      else {
         Toast.show({
           ...toastConfig.error,
           text1: `This WorkOrderNo : ${selectedLoomNoDet.WorkOrderNo} Not Active`,
@@ -364,8 +384,8 @@ const AddDoff = () => {
       }
 
       const res = await getFromAPI('/get_setting')
-      if(res.setting[0].WeftActualCount > 0){
-        if (ischeckweftcount){
+      if (res.setting[0].WeftActualCount > 0) {
+        if (ischeckweftcount) {
           Toast.show({
             ...toastConfig.error,
             text1: 'Weft Count 0 not Allowed!',
@@ -377,30 +397,30 @@ const AddDoff = () => {
       const CrimpValidateData = {
         WorkOrderID: selectedLoomNoDet.WorkOrderID,
         BeamMeter: selectedLoomNoDet.BeamMeter,
-          roll_type: getRollType,
-           balbeam_meter: selectedLoomNoDet.BalanceMeter
-          }
+        roll_type: getRollType,
+        balbeam_meter: selectedLoomNoDet.BalanceMeter
+      }
 
       const encodedCrimpValidateData = encodeURIComponent(JSON.stringify(CrimpValidateData));
       const CrimpValidate = await getFromAPI('/stat_WorkOrderWarpCrimp?data=' + encodedCrimpValidateData)
-      if (CrimpValidate.CrimpValidate == 0){
+      if (CrimpValidate.CrimpValidate == 0) {
         Toast.show({
           ...toastConfig.error,
           text1: CrimpValidate.message,
         });
         return;
       }
-     
 
-      if(res.setting[0].DoffMeterMinLimit > doffMeter){
-          Toast.show({
-            ...toastConfig.error,
-            text1: `The Doff Meter needs to be greater then ${res.setting[0].DoffMeterMinLimit}.`,
-          });
-          return;
+
+      if (res.setting[0].DoffMeterMinLimit > doffMeter) {
+        Toast.show({
+          ...toastConfig.error,
+          text1: `The Doff Meter needs to be greater then ${res.setting[0].DoffMeterMinLimit}.`,
+        });
+        return;
       }
 
-      if (stat_ProductionMeterFirstRoll == 0 && getRollType != 1006195){
+      if (stat_ProductionMeterFirstRoll == 0 && getRollType != 1006195) {
         Toast.show({
           ...toastConfig.error,
           text1: 'Production Qty is 0, This Roll Type Not Allowed!',
@@ -408,7 +428,7 @@ const AddDoff = () => {
         return;
       }
 
-      if (getBeamDetails.length == 0){
+      if (getBeamDetails.length == 0) {
         Toast.show({
           ...toastConfig.error,
           text1: 'Beam Details Not Having!',
@@ -416,7 +436,7 @@ const AddDoff = () => {
         return;
       }
 
-      if (getWeftDetails.length == 0){
+      if (getWeftDetails.length == 0) {
         Toast.show({
           ...toastConfig.error,
           text1: 'Weft Details Not Having!',
@@ -425,14 +445,14 @@ const AddDoff = () => {
       }
 
       const ischeckDoffMeter = checkValueIsNumber(doffMeter);
-      if(!ischeckDoffMeter){
+      if (!ischeckDoffMeter) {
         Toast.show({
           ...toastConfig.error,
           text1: 'Enter Valid Doff Meter',
         });
         return;
       }
-      
+
 
       const doffinfo = {
         docno, date, loom_detail: selectedLoomNoDet, BeamDetails: getBeamDetails,
@@ -443,21 +463,21 @@ const AddDoff = () => {
       if (selectedData) {
         const roll_type = selectedData.Description
         if (roll_type == 'Beam Knotting') {
-          const bal_beam_stat =  checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate);
-          if (bal_beam_stat.success){
+          const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate);
+          if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
             dispatch(resetQrData());
             warpDataLoad(doffinfo);
             navigation.navigate('BeamKnotting', { doffinfo });
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
@@ -468,19 +488,19 @@ const AddDoff = () => {
 
         else if (roll_type == 'Single Beam Knotting') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
             navigation.navigate('SingleBeamKnotting', { doffinfo });
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
@@ -492,43 +512,43 @@ const AddDoff = () => {
 
         else if (roll_type == 'Last Roll SortChange') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
             navigation.navigate('LastRollSortChange', { doffinfo });
-          }  
-          else{
-            if(bal_beam_stat.result < 0){
+          }
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
               });
             }
-          } 
+          }
         }
 
 
         else if (roll_type == 'Sort Change & Beam Change') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
             warpDataLoad(doffinfo);
             navigation.navigate('ScBc', { doffinfo });
-          }  
-          else{
-            if(bal_beam_stat.result < 0){
+          }
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               dispatch(setdoffinfo(doffinfo));
               warpDataLoad(doffinfo);
               navigation.navigate('ScBc', { doffinfo });
@@ -539,40 +559,40 @@ const AddDoff = () => {
 
         else if (roll_type == 'Checking Roll') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             handleSave(doffinfo);
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
               });
             }
           }
-          
+
         }
 
 
         else if (roll_type == 'First Roll') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             handleSave(doffinfo);
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
@@ -584,17 +604,17 @@ const AddDoff = () => {
 
         else if (roll_type == 'Normal') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             handleSave(doffinfo);
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
@@ -605,17 +625,17 @@ const AddDoff = () => {
 
         else if (roll_type == 'Sample Roll') {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 0, CrimpValidate.CrimpValidate)
-          if (bal_beam_stat.success){
+          if (bal_beam_stat.success) {
             handleSave(doffinfo);
           }
-          else{
-            if(bal_beam_stat.result < 0){
+          else {
+            if (bal_beam_stat.result < 0) {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not Minus Value',
               });
             }
-            else{
+            else {
               Toast.show({
                 ...toastConfig.error,
                 text1: 'Balance beam meter is not greater then 750',
@@ -630,7 +650,7 @@ const AddDoff = () => {
 
   const handleRollTypeChange = (value) => {
     const exists = [1006194, 1006195, 1006197, 1006198].includes(value);
-    if (qrDataDoff != null){
+    if (qrDataDoff != null) {
       handleLoomNoChange(qrDataDoff)
     }
     setRollType(value);
@@ -639,10 +659,10 @@ const AddDoff = () => {
   };
 
   const navigateToCamera = () => {
-      navigation.navigate('Camera', {page : 'DoffInfo'});
+    navigation.navigate('Camera', { page: 'DoffInfo' });
   }
 
-  const handlePrinterTypeChange = async(value)=>{
+  const handlePrinterTypeChange = async (value) => {
     setBlueToothConfig(value);
     setErrors((prevErrors) => ({ ...prevErrors, BlueToothConfig: '' }));
   }
@@ -699,15 +719,15 @@ const AddDoff = () => {
                     setSelectdp={handleLoomNoChange}
                     label="Loom No"
                     Selectdp={getLoomNo}
-                    isDisable = {ishideloomDp}
+                    isDisable={ishideloomDp}
                   />
                 </View>
                 <View style={{
                   padding: 0, marginTop: 11
                 }}>
-                   <TouchableOpacity>
-                        <Icon onPress={navigateToCamera} name="qr-code-outline" size={50} color={colors.header} />
-                    </TouchableOpacity>
+                  <TouchableOpacity>
+                    <Icon onPress={navigateToCamera} name="qr-code-outline" size={50} color={colors.header} />
+                  </TouchableOpacity>
                 </View>
               </View>
               {errors.loomNo ? <Text style={styles.errorText}>{errors.loomNo}</Text> : null}
@@ -790,7 +810,7 @@ const AddDoff = () => {
             </View>
             {/* {errors.weightPerMtr1 ? <Text style={styles.errorText}>{errors.weightPerMtr1}</Text> : null} */}
 
-            { buttonUse && <View style={styles.dp}>
+            {buttonUse && <View style={styles.dp}>
               <Dropdown
                 data={getBlueToothConfigList}
                 setSelectdp={handlePrinterTypeChange}
@@ -801,10 +821,10 @@ const AddDoff = () => {
             </View>}
 
             <View style={styles.row}>
-              <BeamDetails getBeamDetails={getBeamDetails} doffMeter={doffMeter}/>
+              <BeamDetails getBeamDetails={getBeamDetails} doffMeter={doffMeter} />
             </View>
             <View style={styles.row}>
-              <WeftDetails getWeftDetails={getWeftDetails} selectedLoomNoDet={selectedLoomNoDet} setischeckweftcount={setischeckweftcount}/>
+              <WeftDetails getWeftDetails={getWeftDetails} selectedLoomNoDet={selectedLoomNoDet} setischeckweftcount={setischeckweftcount} />
             </View>
             <Button
               icon="content-save"
@@ -856,7 +876,7 @@ const styles = StyleSheet.create({
   },
   dp: {
     marginBottom: 20
-  }
+  },
 });
 
 export default AddDoff;

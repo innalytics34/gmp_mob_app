@@ -12,6 +12,11 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftReturnList from '../weftreturn/WeftReturnList';
+import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
+import { BleManager } from 'react-native-ble-plx';
+import { format } from 'date-fns';
+import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
+import { generatePrintData } from '../../bluetoothPrinter/GeneratePrintWeftReturn'; 
 
 
 const WeftReturnInfo = () => {
@@ -36,6 +41,10 @@ const WeftReturnInfo = () => {
   const [getWorkOrderNo, setWorkOrderNo] = useState('');
   const [getLoomNoDp, setLoomNoDp] = useState([]);
   const [getLoomNo, setLoomNo] = useState('');
+  const [buttonUse, setButtonUse] = useState(false);
+  const [getBlueToothConfig, setBlueToothConfig] = useState(1);
+  const [getBlueToothConfigList, setBlueToothConfigList] = useState([]);
+  const [ButtonDisable, setButtonDisable] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -49,12 +58,14 @@ const WeftReturnInfo = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [response, response1] = await Promise.all([
+      const [response, response1, response2] = await Promise.all([
         getFromAPI('/get_work_order_no'),
         getFromAPI('/get_production_location'),
+        getFromAPI('/get_bluetooth_config')
       ]);
       setWorkOrderNoDp(response.WorkOrderNo);
       setProductionLocationDp(response1.ProductionLocation);
+      setBlueToothConfigList(response2.bluetooth_config);
     } catch (error) {
       Alert.alert('Error', 'Failed to load filter data.');
       console.error('Error fetching filter data:', error);
@@ -149,28 +160,16 @@ const WeftReturnInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+    if (!getBlueToothConfig) newErrors.BlueToothConfig = 'Printer is required';
     setErrors(newErrors);
     return newErrors
   }
 
-
-  const handleSubmit = async() => {
-    const newErrors = {};
-    if (!docno) newErrors.docno = 'Document No is required';
-    if (!date) newErrors.date = 'Date is required';
-    if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
-    if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
-    if (!getItemDescription) newErrors.descrip = 'Item Description is required';
-    if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      const output = checkIssueCone(savedData);
-      if (output){
-        const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
-          LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation 
-        }
+  const handleConfirmSave = async(data)=>{
         setLoading(true);
+        setButtonDisable(true);
         const response = await postToAPI('/insert_weft_return', data);
+        setButtonDisable(false);
         setLoading(false);
         if (response.rval > 0){
           Toast.show({
@@ -187,14 +186,118 @@ const WeftReturnInfo = () => {
             text1: response.message,
           });
         }
-      }
-      else{
+  }
+
+
+  const handleSubmit = async() => {
+    const newErrors = {};
+    if (!docno) newErrors.docno = 'Document No is required';
+    if (!date) newErrors.date = 'Date is required';
+    if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
+    if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
+    if (!getItemDescription) newErrors.descrip = 'Item Description is required';
+    if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length === 0) {
+      const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
+      const res = await bluetoothconfig(bluetooth_conf, setLoading);
+      const output = checkIssueCone(savedData);
+
+      if (!output){
         Toast.show({
           ...toastConfig.error,
           text1: 'Please Add IssueCone',
         });
+        return;
       }
+
+    const signalresponse = await getCurrentWifiSignalStrength();
+    if (signalresponse.rval == 0){
+      Toast.show({
+        ...toastConfig.error,
+        text1: signalresponse.message,
+      });
+      setButtonDisable(false);
+      return;
     }
+
+      const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
+        LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation 
+      }
+
+        if (res.val == 0) {
+          Alert.alert(
+           res.message, 
+            `Are you sure to Save without print`, 
+            [
+              { 
+                text: "Cancel", 
+                onPress: () =>  setButtonDisable(false), 
+                style: "cancel"
+              },
+              { 
+                text: "Save", 
+                onPress: () => handleConfirmSave(data), 
+              },
+            ],
+            { cancelable: false } 
+          );
+        }
+        else{
+            setLoading(true);
+            setButtonDisable(true);
+            const response = await postToAPI('/insert_weft_return', data);
+            setLoading(false);
+            setButtonDisable(false);
+            if (response.rval > 0){
+              Toast.show({
+                ...toastConfig.success,
+                text1: response.message,
+              });
+              const bleManager = new BleManager();
+              const formattedDate = format(new Date(), 'hh:mm a');
+              const print_data = generatePrintData(
+                response.print_data.ItemDescription,
+                response.print_data.LotNo,
+                response.print_data.QRCode,
+                response.print_data.NoOfCone,
+                response.print_data.TotalWeight
+              );
+              const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
+              await connected.discoverAllServicesAndCharacteristics();
+              await bleManager.writeCharacteristicWithResponseForDevice(
+                bluetooth_conf.device_id,
+                bluetooth_conf.service_id,
+                bluetooth_conf.char_id,
+                print_data
+              );
+
+              // await connected.discoverAllServicesAndCharacteristics();
+              // await bleManager.writeCharacteristicWithResponseForDevice(
+              //   bluetooth_conf.device_id,
+              //   bluetooth_conf.service_id,
+              //   bluetooth_conf.char_id,
+              //   print_data
+              // );
+
+
+              setTimeout(() => {
+                navigation.navigate('Admin');
+              }, 1500);
+            }
+            else{
+              Toast.show({
+                ...toastConfig.error,
+                text1: response.message,
+              });
+            }
+            }
+        }
+  }
+
+   const handlePrinterTypeChange = async(value)=>{
+    setBlueToothConfig(value);
+    setErrors((prevErrors) => ({ ...prevErrors, BlueToothConfig: '' }));
   }
 
   return (
@@ -275,6 +378,17 @@ const WeftReturnInfo = () => {
           {errors.ProductionLocation && <Text style={styles.errorText}>{errors.ProductionLocation}</Text>}
         </View>
 
+
+        <View style={styles.dp}>
+              <Dropdown
+                data={getBlueToothConfigList}
+                setSelectdp={handlePrinterTypeChange}
+                label="Printer Type"
+                Selectdp={getBlueToothConfig}
+              />
+              {errors.BlueToothConfig ? <Text style={styles.errorText}>{errors.BlueToothConfig}</Text> : null}
+        </View>
+
         {/* <View style={styles.row}>
           <PaperInput
             label="QR Data"
@@ -305,7 +419,7 @@ const WeftReturnInfo = () => {
           icon="content-save"
           mode="contained"
           style={{ backgroundColor: colors.button, marginBottom: 20, borderRadius: 10 }}
-          disabled={loading}
+          disabled={ButtonDisable}
           onPress={handleSubmit}
         >
           Save

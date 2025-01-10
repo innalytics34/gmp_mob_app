@@ -8,9 +8,14 @@ const savedDataSlice = createSlice({
   name: 'savedData',
   initialState,
   reducers: {
-    // Append new items to the existing saved data
+    // Append new items to the existing saved data if QRCode is not already present
     appendSavedData(state, action) {
-      state.items.push(...action.payload); // Use spread operator to append
+      // Filter out items that are already present in the list based on QRCode
+      const newItems = action.payload.filter(item => 
+        !state.items.some(existingItem => existingItem.QRCode === item.QRCode)
+      );
+      // Push the filtered new items into the state
+      state.items.push(...newItems);
     },
     // Update an existing item in the saved data
     updateSavedData(state, action) {

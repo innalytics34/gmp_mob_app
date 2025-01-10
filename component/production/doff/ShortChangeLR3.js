@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView  } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { TextInput as PaperInput, Button, Provider as PaperProvider } from 'react-native-paper';
@@ -16,7 +16,8 @@ import { BleManager } from 'react-native-ble-plx';
 import { generatePrintData } from '../../bluetoothPrinter/generatePrintData'; 
 import { format } from 'date-fns';
 import { bluetoothconfig } from '../../bluetoothPrinter/bluetoothconfig';
-import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
+import { getCurrentWifiSignalStrength, CurrentWifiSignalStrength } from '../../checkNetworkStatus';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 
 const BeamKnotting = () => {
@@ -44,16 +45,34 @@ const BeamKnotting = () => {
  const [getBlueToothConfig, setBlueToothConfig] = useState(1);
  const [getBlueToothConfigList, setBlueToothConfigList] = useState([]);
  const [ButtonDisable, setButtonDisable] = useState(false);
+  const [getWifiSignal, setWifiSignal] = useState(0);
+ 
+    useEffect(() => {
+       const interval = setInterval(async () => {
+         const signalresponse = await CurrentWifiSignalStrength();
+         setWifiSignal(signalresponse);
+       }, 2000);
+       return () => clearInterval(interval);
+     }, [])
+ 
 
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Short Change</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                          <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Short Change</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Icon name="wifi" size={20} color="#bfffcf" style={{ marginRight: 5 }} />
+                            <Text style={{ color: '#f66d5e', fontWeight: 'bold', fontSize: 12, opacity: 1.5 }}>
+                              {getWifiSignal} dBm
+                            </Text>
+                          </View>
+                        </View>
       ),
       headerStyle: { backgroundColor: colors.header },
     });
-  }, [navigation]);
+  }, [navigation, getWifiSignal]);
 
   const fetchData = async () => {
     setLoading(true);

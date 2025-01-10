@@ -9,14 +9,17 @@ import Dropdown from '../../dropdown/Dropdown';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getFromAPI, postToAPI } from '../../../apicall/apicall';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftIssueList from '../weftissue/WeftIssueList';
+import { resetSavedData } from './savedDataSlice';
+import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
 
 
 
 const WeftIssueInfo = () => {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const qrData = useSelector(state => state.QRData.data);
   const savedData = useSelector((state) => state.savedData.items);
   const [loading, setLoading] = useState(false);
@@ -100,6 +103,8 @@ const WeftIssueInfo = () => {
     ]);
     setItemDescriptionDp(response.ItemDescription);
     setLoomNoDp(response1.LoomNo);
+    setItemDescription('');
+    setLoomNo('');
   };
 
   const handleProductionLocation = (value) => {
@@ -155,6 +160,17 @@ const WeftIssueInfo = () => {
 
 
   const handleSubmit = async() => {
+
+    const signalresponse = await getCurrentWifiSignalStrength();
+        if (signalresponse.rval == 0){
+          Toast.show({
+            ...toastConfig.error,
+            text1: signalresponse.message,
+          });
+          setButtonDisable(false);
+         return;
+        }
+
     const newErrors = {};
     if (!docno) newErrors.docno = 'Document No is required';
     if (!date) newErrors.date = 'Date is required';
@@ -178,6 +194,7 @@ const WeftIssueInfo = () => {
                 ...toastConfig.success,
                 text1: response.message,
               });
+              dispatch(resetSavedData());
               setTimeout(() => {
                 navigation.navigate('Admin');
               }, 1500);

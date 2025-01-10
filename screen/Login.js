@@ -50,7 +50,7 @@ const LoginScreen = () => {
   }, []);
 
   const checkVersion = () => {
-    return getAppVersion === '1.0.3';
+    return getAppVersion === '1.0.4';
   };
 
   const forcelogoutLogin = async () =>{
@@ -87,7 +87,7 @@ const LoginScreen = () => {
       }
       if (!email) newErrors.username = 'Username is required';
       if (!password) newErrors.password = 'Password is required';
-      const data = { username: email, password: password, version: '1.0.3'};
+      const data = { username: email, password: password, version: '1.0.4'};
       setErrors(newErrors);
       if (Object.keys(newErrors).length === 0) {
         setLoading(true);
@@ -155,7 +155,7 @@ const LoginScreen = () => {
     <>
       <View>
         <Text style={{ padding: 5, fontWeight: 'bold', color: colors.header }}>
-          Version 1.0.3
+          Version 1.0.4
         </Text>
       </View>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
