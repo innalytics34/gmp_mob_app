@@ -12,7 +12,7 @@ import { resetQrData } from '../../barcodescan/QrSlice';
 import Toast from 'react-native-toast-message';
 import EditIssueCone from '../weftissue/EditIssueCone';
 
-const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInput, navigateToCamera }) => {
+const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInput, navigateToCamera, getProductionLocation }) => {
   const dispatch = useDispatch();
   const savedData = useSelector((state) => state.savedData.items);
 
@@ -25,64 +25,56 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
 
 
   useEffect(() => {
-    // console.log(savedData, "--999")
     const checkedItems = savedData.map(item => item.QRCode);
-    // console.log(checkedItems,"------------------start1")
     setSelectedItems(checkedItems);
   }, [savedData]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (qrData && qrData !== '' && qrData !== null) {
-        const isAlreadyScanned = savedData.some(item => item.QRCode === qrData);
-        if (isAlreadyScanned) {
-          dispatch(resetQrData());
-          Toast.show({
-            ...toastConfig.error,
-            text1: 'QR Already Taken!',
-          });
-        } else {
-          console.log(qrData, "------------ci")
-          const data = { ItemDescriptionUID: getItemDescription, LocationID: 1006297, QRCode: qrData };
-          const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-          const response = await getFromAPI(`/get_weft_issue_details?data=${encodedFilterData}`);
-          if (response && response.WeftIssueDetails.length > 0){
-            // console.log(selectedItems, "========-----l")
-            const isAlreadyScanned = savedData.some(item => item.QRCode === qrData);
-            //  console.log(isAlreadyScanned, "---------cfff")
-            dispatch(appendSavedData(response.WeftIssueDetails));
-            dispatch(resetQrData());
-            Toast.show({
-              ...toastConfig.success,
-              text1: 'Data Added to List',
-            });
-          }
-          else{
-            console.log(qrData, 'Please Scan-----------')
-            Toast.show({
-              ...toastConfig.error,
-              text1: 'Please Scan Valid QR',
-            });
-            dispatch(resetQrData());
-          }
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     if (qrData && qrData !== '' && qrData !== null) {
+  //       const isAlreadyScanned = savedData.some(item => item.QRCode === qrData);
+  //       if (isAlreadyScanned) {
+  //         dispatch(resetQrData());
+  //         Toast.show({
+  //           ...toastConfig.error,
+  //           text1: 'QR Already Taken!',
+  //         });
+  //       } else {
+  //         const data = { ItemDescriptionUID: getItemDescription, LocationID: getProductionLocation, QRCode: qrData };
+  //         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+  //         const response = await getFromAPI(`/get_weft_issue_details?data=${encodedFilterData}`);
+  //         if (response && response.WeftIssueDetails.length > 0){
+  //           const isAlreadyScanned = savedData.some(item => item.QRCode === qrData);
+  //           dispatch(appendSavedData(response.WeftIssueDetails));
+  //           dispatch(resetQrData());
+  //           Toast.show({
+  //             ...toastConfig.success,
+  //             text1: 'Data Added to List',
+  //           });
+  //         }
+  //         else{
+  //           Toast.show({
+  //             ...toastConfig.error,
+  //             text1: 'Please Scan Valid QR',
+  //           });
+  //           dispatch(resetQrData());
+  //         }
          
-        }
-      }
-    };
+  //       }
+  //     }
+  //   };
 
-    fetchData();
-  }, [qrData, getItemDescription]);
+  //   fetchData();
+  // }, [qrData, getItemDescription]);
 
 
   const handleShowDp = async () => {
     const err = checkInput();
     if (Object.keys(err).length == 0) {
       setModalVisible(true);
-      const data = { ItemDescriptionUID: getItemDescription, LocationID: 1006297, QRCode: qrData };
+      const data = { ItemDescriptionUID: getItemDescription, LocationID: getProductionLocation, QRCode: qrData };
       const encodedFilterData = encodeURIComponent(JSON.stringify(data));
       const response = await getFromAPI(`/get_weft_issue_details?data=${encodedFilterData}`);
-      // const output = response.WeftIssueDetails.map(item => ({a: item.QRCode}));
-      // console.log(output, "--------cfds")
       setWIList(response.WeftIssueDetails);
     }
   };
@@ -135,9 +127,9 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
         <TouchableOpacity style={styles.button} onPress={handleShowDp}>
           <Icon name="add-circle" size={35} color={colors.data} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={()=>navigateToCamera()}>
+        {/* <TouchableOpacity style={styles.button} onPress={()=>navigateToCamera()}>
         <Icon name="qr-code-outline" size={40} color={colors.header} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView horizontal>
@@ -189,13 +181,14 @@ const WeftIssueList = React.memo(({ getItemDescription, qrData, errors, checkInp
           <View style={styles.modalContent}>
             <View style={styles.flatListContainer}>
               <View style={styles.headerRow1}>
-                <Text style={styles.header1}>Select</Text>
+                <Text style={styles.header1}>SelectRow</Text>
                 <Text style={styles.header1}>LotNo</Text>
                 <Text style={styles.header1}>StockCone</Text>
                 <Text style={styles.header1}>ConeWeight</Text>
               </View>
               <FlatList
                 data={getWIList}
+                style={{padding:10}}
                 keyExtractor={(item) => item.QRCode}
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.listItem} onPress={() => toggleSelectItem(item)}>
@@ -247,10 +240,11 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: 360,
-    padding: 20,
+    padding: 1,
     backgroundColor: 'white',
     borderRadius: 5,
     alignItems: 'center',
+    padding:1
   },
   modalTitle: {
     fontSize: 14,
@@ -259,7 +253,7 @@ const styles = StyleSheet.create({
     color: 'gray'
   },
   flatListContainer: {
-    maxHeight: 400,
+    maxHeight: 500,
     width: '100%',
   },
   listItem: {
@@ -274,12 +268,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 0,
+    padding:10,
+    marginTop:10
   },
   header1: {
     flex: 1,
     textAlign: 'center',
     fontWeight: 'bold',
-    fontSize: 10,
+    fontSize: 12,
     color: 'gray'
   },
   rowContainer: {
@@ -303,6 +299,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 10,
     marginBottom: 10,
+    padding:10
   },
 });
 

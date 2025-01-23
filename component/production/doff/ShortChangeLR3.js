@@ -94,7 +94,7 @@ const BeamKnotting = () => {
       // dispatch(setWarpDetails(response3.beam_knotting[0].Warp));  
       setBeamKnotting(response3.beam_knotting[0]); 
     } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
+      Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
       console.error('Error fetching filter data:', error);
     } finally {
       setLoading(false);  

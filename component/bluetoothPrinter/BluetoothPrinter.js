@@ -42,7 +42,7 @@ export default function App() {
       ]);
       setBlueToothConfigList(response.bluetooth_config)
     } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
+      Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
       console.error('Error fetching filter data:', error);
     } finally {
       setLoading(false);
@@ -164,7 +164,7 @@ export default function App() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    padding: 10,
+    padding: 2,
   },
   centerContainer: {
     flex: 1,

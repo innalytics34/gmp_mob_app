@@ -98,7 +98,7 @@ const AddDoff = () => {
       setRollTypeDp(response1.roll_type);
       setBlueToothConfigList(response2.bluetooth_config);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
+      Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
       console.error('Error fetching filter data:', error);
     } finally {
       setLoading(false);

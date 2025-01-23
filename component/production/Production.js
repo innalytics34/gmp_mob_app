@@ -171,15 +171,16 @@ const HomeScreen = () => {
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity style={styles.touchable} onPress={wefftWastageInfo}>
-          <LinearGradient
+          {/* <LinearGradient
             colors={['#d0fbe1', '#f4fff8']}
             style={styles.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.title}>Weft Wastage</Text>
-            <Icon name="trash-outline" size={25} color={colorss.header}/>
-          </LinearGradient>
+          > */}
+            {/* <Text style={styles.title}>Weft Wastage</Text>
+            <Icon name="trash-outline" size={25} color={colorss.header}/> */}
+            {/* <TestPrinter/> */}
+          {/* </LinearGradient> */}
         </TouchableOpacity>
       </View>
       <TestPrinter/>

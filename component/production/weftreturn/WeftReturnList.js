@@ -12,7 +12,7 @@ import { resetQrData } from '../../barcodescan/QrSlice';
 import Toast from 'react-native-toast-message';
 import EditReturnCone from '../weftreturn/EditReturnCone';
 
-const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkInput, ProductionLocation, navigateToCamera }) => {
+const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkInput, ProductionLocation, workorderID, loomID, navigateToCamera }) => {
   const dispatch = useDispatch();
   const savedData = useSelector((state) => state.savedDataReturn.items);
 
@@ -23,32 +23,32 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
   const tableHead = ['','LotNo', 'StockCone', 'ConeWeight', 'StockQty', 'ReturnCone'];
   const widthArr = [35, 100, 100, 100, 100, 120];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (qrData && qrData !== '' && qrData !== null) {
-        const isAlreadyScanned = savedData.some(item => item.BatchID === qrData);
-        if (isAlreadyScanned) {
-          dispatch(resetQrData());
-          Toast.show({
-            ...toastConfig.error,
-            text1: 'QR Already Taken!',
-          });
-        } else {
-          const data = { ItemDescriptionUID: getItemDescription, LocationID: ProductionLocation, QRCode: qrData };
-          const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-          const response = await getFromAPI(`/get_weft_return_details?data=${encodedFilterData}`);
-          dispatch(appendSavedData(response.WeftReturnDetails));
-          dispatch(resetQrData());
-          Toast.show({
-            ...toastConfig.success,
-            text1: 'Data Added to List',
-          });
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     if (qrData && qrData !== '' && qrData !== null) {
+  //       const isAlreadyScanned = savedData.some(item => item.BatchID === qrData);
+  //       if (isAlreadyScanned) {
+  //         dispatch(resetQrData());
+  //         Toast.show({
+  //           ...toastConfig.error,
+  //           text1: 'QR Already Taken!',
+  //         });
+  //       } else {
+  //         const data = { ItemDescriptionUID: getItemDescription, LocationID: ProductionLocation, QRCode: qrData };
+  //         const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+  //         const response = await getFromAPI(`/get_weft_return_details?data=${encodedFilterData}`);
+  //         dispatch(appendSavedData(response.WeftReturnDetails));
+  //         dispatch(resetQrData());
+  //         Toast.show({
+  //           ...toastConfig.success,
+  //           text1: 'Data Added to List',
+  //         });
+  //       }
+  //     }
+  //   };
 
-    fetchData();
-  }, [qrData, getItemDescription]);
+  //   fetchData();
+  // }, [qrData, getItemDescription]);
 
   useEffect(() => {
     const checkedItems = savedData.map(item => item.StockID);
@@ -59,11 +59,9 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
     const err = checkInput();
     if (Object.keys(err).length == 0) {
       setModalVisible(true);
-      const data = { ItemDescriptionUID: getItemDescription, LocationID: ProductionLocation, QRCode: qrData };
+      const data = { ItemDescriptionUID: getItemDescription, LocationID: ProductionLocation, QRCode: qrData, workorderID, loomID };
       const encodedFilterData = encodeURIComponent(JSON.stringify(data));
       const response = await getFromAPI(`/get_weft_return_details?data=${encodedFilterData}`);
-      const output = response.WeftReturnDetails.map(item => ({a: item.BatchID}));
-      console.log(output, "--------cfds")
       setWIList(response.WeftReturnDetails);
     }
   };
@@ -117,9 +115,9 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
         <TouchableOpacity style={styles.button} onPress={handleShowDp}>
           <Icon name="add-circle" size={35} color={colors.data} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} >
+        {/* <TouchableOpacity style={styles.button} >
         <Icon name="qr-code-outline" size={40} color={colors.header} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView horizontal>
@@ -170,13 +168,14 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
     <View style={styles.modalContent}>
       <View style={styles.flatListContainer}>
         <View style={styles.headerRow1}>
-          <Text style={styles.header1}>Select</Text>
+          <Text style={styles.header1}>SelectRow</Text>
           <Text style={styles.header1}>LotNo</Text>
           <Text style={styles.header1}>StockCone</Text>
           <Text style={styles.header1}>ConeWeight</Text>
         </View>
         <FlatList
           data={getWIList}
+          style={{padding:10}}
           keyExtractor={(item) => item.StockID}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.listItem} onPress={() => toggleSelectItem(item)}>
@@ -224,11 +223,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: 'gray',
+    color: 'gray'
   },
   modalContent: {
     width: 360,
-    padding: 20,
+    padding: 1,
     backgroundColor: 'white',
     borderRadius: 5,
     alignItems: 'center',
@@ -240,7 +239,7 @@ const styles = StyleSheet.create({
     color:'gray'
   },
   flatListContainer: {
-    maxHeight: 400,
+    maxHeight: 500,
     width: '100%',
   },
   listItem: {
@@ -261,7 +260,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize:10,
-    color:'gray'
+    color:'gray',
+    marginTop:10
   },
   rowContainer: {
     flexDirection: 'row',
@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 10,
     marginBottom: 10,
+    padding:10
   },
 });
 

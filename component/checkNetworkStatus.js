@@ -7,7 +7,6 @@ export const getCurrentWifiSignalStrength = async () => {
     const strength = await WifiManager.getCurrentSignalStrength();
     if (strength !== null) {
       const res = await getFromAPI('/get_setting')
-      console.log(res)
       if (!res && res.setting.length == 0 ){
         return { message: "Please Connect Wifi", rval: 0 };
       }

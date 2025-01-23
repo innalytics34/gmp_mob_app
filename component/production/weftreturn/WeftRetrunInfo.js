@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useState, useCallback, useLayoutEffect, useEffect } from 'react';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, TextInput as PaperInput, Provider as PaperProvider } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
@@ -12,11 +12,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftReturnList from '../weftreturn/WeftReturnList';
-import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
-import { BleManager } from 'react-native-ble-plx';
-import { format } from 'date-fns';
-import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
-import { generatePrintData } from '../../bluetoothPrinter/GeneratePrintWeftReturn'; 
+// import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
+// import { BleManager } from 'react-native-ble-plx';
+// import { format } from 'date-fns';
+import { getCurrentWifiSignalStrength, CurrentWifiSignalStrength } from '../../checkNetworkStatus';
+// import { generatePrintData } from '../../bluetoothPrinter/GeneratePrintWeftReturn'; 
+
 
 
 const WeftReturnInfo = () => {
@@ -45,35 +46,77 @@ const WeftReturnInfo = () => {
   const [getBlueToothConfig, setBlueToothConfig] = useState(1);
   const [getBlueToothConfigList, setBlueToothConfigList] = useState([]);
   const [ButtonDisable, setButtonDisable] = useState(false);
+  const [ishideloomDp, setIshideloomDp] = useState(false);
+  const [getRemarks, setRemarks] = useState('');
+  const [getWifiSignal, setWifiSignal] = useState(0);
+
+  useEffect(() => {
+        const interval = setInterval(async () => {
+          const signalresponse = await CurrentWifiSignalStrength();
+          setWifiSignal(signalresponse);
+        }, 2000);
+        return () => clearInterval(interval);
+      }, [])
+
+
+   useEffect(() => {
+        setLoading(true);
+        if (Array.isArray(getLoomNoDp)) {
+          if (qrData != null && getLoomNoDp.length > 0 && qrData.length < 7) {
+            const result = getLoomNoDp.find(item => item.MachineNo === qrData);
+            if (result) {
+              setIshideloomDp(true);
+              setLoomNo(result.value);
+              handleLoomNoChange(result.value)
+            } else {
+              Toast.show({
+                ...toastConfig.error,
+                text1: 'QR Code Data not Found',
+              });
+              setIshideloomDp(false);
+            }
+          }
+        }
+        setLoading(false);
+      }, [getLoomNo, qrData]);  
+
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: () => (
-        <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Weft Return</Text>
-      ),
-      headerStyle: { backgroundColor: colors.header },
-    });
-  }, [navigation]);
+      navigation.setOptions({
+        headerTitle: () => (
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Weft Return</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="wifi" size={20} color="#bfffcf" style={{ marginRight: 5 }} />
+                      <Text style={{ color: '#f66d5e', fontWeight: 'bold', fontSize: 12, opacity: 1.5 }}>
+                        {getWifiSignal} dBm
+                      </Text>
+                    </View>
+                  </View>
+        ),
+        headerStyle: { backgroundColor: colors.header },
+      });
+    }, [navigation, getWifiSignal]);
 
   const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [response, response1, response2] = await Promise.all([
-        getFromAPI('/get_work_order_no'),
-        getFromAPI('/get_production_location'),
-        getFromAPI('/get_bluetooth_config')
-      ]);
-      setWorkOrderNoDp(response.WorkOrderNo);
-      setProductionLocationDp(response1.ProductionLocation);
-      setBlueToothConfigList(response2.bluetooth_config);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
-      console.error('Error fetching filter data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+     setLoading(true);
+     try {
+       const [response, response1, response2] = await Promise.all([
+         getFromAPI('/get_loomno_new?data=' + '{"weft_type" : 2}'),
+         getFromAPI('/get_production_location'),
+         getFromAPI('/get_work_order_no'),
+       ]);
+       setLoomNoDp(response.loomNo_New);
+       setWorkOrderNoDp(response2.WorkOrderNo)
+       setProductionLocationDp(response1.ProductionLocation);
+     } catch (error) {
+       Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
+       console.error('Error fetching filter data:', error);
+     } finally {
+       setLoading(false);
+     }
+   };
+ 
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -97,19 +140,6 @@ const WeftReturnInfo = () => {
 
   const handleWorkOrderNoChange = async (selectedItem) => {
     setWorkOrderNo(selectedItem);
-    setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
-    const selectedData = getWorkOrderNoDp.find(item => item.value === selectedItem);
-    setSelectedWODet(selectedData);
-    const data = { WorkOrderID: selectedData.UID, LocationID: 1006297 };
-    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-    const data1 = { WorkOrderID: selectedData.UID };
-    const encodedFilterData1 = encodeURIComponent(JSON.stringify(data1));
-    const [response, response1] = await Promise.all([
-      getFromAPI('/get_wi_item_description?data=' + encodedFilterData),
-      getFromAPI('/get_loom_no?data=' + encodedFilterData1),
-    ]);
-    setItemDescriptionDp(response.ItemDescription);
-    setLoomNoDp(response1.LoomNo);
   };
 
   const handleProductionLocation = (value) => {
@@ -119,27 +149,39 @@ const WeftReturnInfo = () => {
     setErrors((prevErrors) => ({ ...prevErrors, ProductionLocation: '' }));
   };
 
-  const handleLoomNoChange = (selectedItem) => {
-    setLoomNo(selectedItem);
-    const selectedData = getLoomNoDp.find(item => item.value === selectedItem);
-    setSelectedLoomDet(selectedData);
-    setErrors((prevErrors) => ({ ...prevErrors, loom_no: '' }));
-  }
+    const handleLoomNoChange = async(selectedItem) => {
+      setLoomNo(selectedItem);
+      const selectedData = getLoomNoDp.find(item => item.value === selectedItem);
+      setSelectedLoomDet(selectedData);
+      setWorkOrderNo(selectedData.WorkOrderID);
+      const selectedData1 = getWorkOrderNoDp.find(item => item.value === selectedData.WorkOrderID);
+      setSelectedWODet(selectedData1);
+  
+      const data = { WorkOrderID: selectedData.WorkOrderID};
+      const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+      const [response] = await Promise.all([
+        getFromAPI('/get_wi_item_description?data=' + encodedFilterData),
+      ]);
+      setItemDescriptionDp(response.ItemDescription);
+      setItemDescription('');
+      setErrors((prevErrors) => ({ ...prevErrors, loom_no: '' }));
+      setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
+    }
  
 
-  const navigateToCamera = () => {
-    const newErrors = {};
-    if (!docno) newErrors.docno = 'Document No is required';
-    if (!date) newErrors.date = 'Date is required';
-    if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
-    if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
-    if (!getItemDescription) newErrors.descrip = 'Item Description is required';
-    if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      navigation.navigate('Camera', {page : 'AddDoff'});
-    };
-  }
+  // const navigateToCamera = () => {
+  //   const newErrors = {};
+  //   if (!docno) newErrors.docno = 'Document No is required';
+  //   if (!date) newErrors.date = 'Date is required';
+  //   if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
+  //   if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
+  //   if (!getItemDescription) newErrors.descrip = 'Item Description is required';
+  //   if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+  //   setErrors(newErrors);
+  //   if (Object.keys(newErrors).length === 0) {
+  //     navigation.navigate('Camera', {page : 'AddDoff'});
+  //   };
+  // }
 
 
 
@@ -188,6 +230,11 @@ const WeftReturnInfo = () => {
         }
   }
 
+  const navigateToCamera = () => {
+    navigation.navigate('Camera', { page: 'DoffInfo' });
+  }
+
+
 
   const handleSubmit = async() => {
     const newErrors = {};
@@ -197,12 +244,12 @@ const WeftReturnInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+    if (!getRemarks) newErrors.remarks = 'Remarks is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
-      const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
-      const res = await bluetoothconfig(bluetooth_conf, setLoading);
+      // const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
+      // const res = await bluetoothconfig(bluetooth_conf, setLoading);
       const output = checkIssueCone(savedData);
-
       if (!output){
         Toast.show({
           ...toastConfig.error,
@@ -222,10 +269,10 @@ const WeftReturnInfo = () => {
     }
 
       const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
-        LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation 
+        LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks 
       }
-
-        if (res.val == 0) {
+        const printnot = false;
+        if (printnot) {
           Alert.alert(
            res.message, 
             `Are you sure to Save without print`, 
@@ -254,23 +301,23 @@ const WeftReturnInfo = () => {
                 ...toastConfig.success,
                 text1: response.message,
               });
-              const bleManager = new BleManager();
-              const formattedDate = format(new Date(), 'hh:mm a');
-              const print_data = generatePrintData(
-                response.print_data.ItemDescription,
-                response.print_data.LotNo,
-                response.print_data.QRCode,
-                response.print_data.NoOfCone,
-                response.print_data.TotalWeight
-              );
-              const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
-              await connected.discoverAllServicesAndCharacteristics();
-              await bleManager.writeCharacteristicWithResponseForDevice(
-                bluetooth_conf.device_id,
-                bluetooth_conf.service_id,
-                bluetooth_conf.char_id,
-                print_data
-              );
+              // const bleManager = new BleManager();
+              // const formattedDate = format(new Date(), 'hh:mm a');
+              // const print_data = generatePrintData(
+              //   response.print_data.ItemDescription,
+              //   response.print_data.LotNo,
+              //   response.print_data.QRCode,
+              //   response.print_data.NoOfCone,
+              //   response.print_data.TotalWeight
+              // );
+              // const connected = await bleManager.connectToDevice(bluetooth_conf.device_id);
+              // await connected.discoverAllServicesAndCharacteristics();
+              // await bleManager.writeCharacteristicWithResponseForDevice(
+              //   bluetooth_conf.device_id,
+              //   bluetooth_conf.service_id,
+              //   bluetooth_conf.char_id,
+              //   print_data
+              // );
 
               // await connected.discoverAllServicesAndCharacteristics();
               // await bleManager.writeCharacteristicWithResponseForDevice(
@@ -338,11 +385,35 @@ const WeftReturnInfo = () => {
         </View>
 
         <View style={styles.dp}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 320 }}>
+                  <Dropdown
+                    data={getLoomNoDp}
+                    setSelectdp={handleLoomNoChange}
+                    label="Loom No"
+                    Selectdp={getLoomNo}
+                    isDisable={ishideloomDp}
+                  />
+                </View>
+                <View style={{
+                  padding: 0, marginTop: 11
+                }}>
+                  <TouchableOpacity>
+                    <Icon onPress={navigateToCamera} name="qr-code-outline" size={50} color={colors.header} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {errors.loomNo ? <Text style={styles.errorText}>{errors.loomNo}</Text> : null}
+        </View>
+
+
+        <View style={styles.dp}>
           <Dropdown
             data={getWorkOrderNoDp}
             setSelectdp={handleWorkOrderNoChange}
             label="WorkOrder No"
             Selectdp={getWorkOrderNo}
+            isDisable={true}
           />
           {errors.WorkOrderNo ? <Text style={styles.errorText}>{errors.WorkOrderNo}</Text> : null}
         </View>
@@ -359,17 +430,6 @@ const WeftReturnInfo = () => {
 
         <View style={styles.dp}>
           <Dropdown
-            data={getLoomNoDp}
-            setSelectdp={handleLoomNoChange}
-            label="Loom No"
-            Selectdp={getLoomNo}
-          />
-          {errors.loom_no ? <Text style={styles.errorText}>{errors.loom_no}</Text> : null}
-        </View>
-
-
-        <View style={styles.dp}>
-          <Dropdown
             data={getProductionLocationDp}
             setSelectdp={handleProductionLocation}
             label="Production Location"
@@ -379,7 +439,7 @@ const WeftReturnInfo = () => {
         </View>
 
 
-        <View style={styles.dp}>
+        {/* <View style={styles.dp}>
               <Dropdown
                 data={getBlueToothConfigList}
                 setSelectdp={handlePrinterTypeChange}
@@ -387,7 +447,29 @@ const WeftReturnInfo = () => {
                 Selectdp={getBlueToothConfig}
               />
               {errors.BlueToothConfig ? <Text style={styles.errorText}>{errors.BlueToothConfig}</Text> : null}
-        </View>
+        </View> */}
+
+         <View style={styles.row}>
+                       <PaperInput
+                                label="Remarks"
+                                value={getRemarks}
+                                style={[styles.input, { fontSize: 14 }]}
+                                onChangeText={(text) => {
+                                  setRemarks(text);
+                                  setErrors((prevErrors) => ({ ...prevErrors, remarks: '' }));
+                                }}
+                                mode="outlined"
+                                theme={{
+                                  colors: {
+                                    primary: colors.data,
+                                    error: colors.error,
+                                    outline: colors.data,
+                                  },
+                                  roundness: 4,
+                                }}
+                              />
+                </View>
+                {errors.remarks && <Text style={styles.errorText}>{errors.remarks}</Text>}
 
         {/* <View style={styles.row}>
           <PaperInput
@@ -412,7 +494,12 @@ const WeftReturnInfo = () => {
         </View> */}
 
         <View>
-          <WeftReturnList getItemDescription={getItemDescription} qrData={qrData} errors={errors} checkInput={checkInput} ProductionLocation={getProductionLocation} navigateToCamera={navigateToCamera}/>
+          <WeftReturnList getItemDescription={getItemDescription} 
+          qrData={''} errors={errors} checkInput={checkInput} 
+          ProductionLocation={getProductionLocation} 
+          workorderID ={getWorkOrderNo}
+          loomID ={getLoomNo}
+          navigateToCamera={navigateToCamera}/>
         </View>
 
         <Button

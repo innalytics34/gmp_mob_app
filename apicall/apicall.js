@@ -7,7 +7,7 @@ const API_BASE_URL = "http://192.168.50.55:813/GMPMob";
 const getipconfig = (ipconfig)=>{
   // if (JSON.parse(ipconfig)){
   //   if (JSON.parse(ipconfig).ip_config.length > 0){
-  //     // return `http://${JSON.parse(ipconfig).ip_config[0].ip}:813/GMPMob`
+  //     return `http://${JSON.parse(ipconfig).ip_config[0].ip}:813/GMPMob`
   //     return API_BASE_URL
   //   }
   //   else{

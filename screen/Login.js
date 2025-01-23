@@ -38,7 +38,7 @@ const LoginScreen = () => {
       setUserNameList(response.userlist);
       setAppVersion(response1.setting[0].AppVersion);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
+      Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
       console.error('Error fetching filter data:', error);
     } finally {
       setLoading(false);
@@ -50,7 +50,7 @@ const LoginScreen = () => {
   }, []);
 
   const checkVersion = () => {
-    return getAppVersion === '1.0.4';
+    return getAppVersion === '1.0.5';
   };
 
   const forcelogoutLogin = async () =>{
@@ -87,7 +87,7 @@ const LoginScreen = () => {
       }
       if (!email) newErrors.username = 'Username is required';
       if (!password) newErrors.password = 'Password is required';
-      const data = { username: email, password: password, version: '1.0.4'};
+      const data = { username: email, password: password, version: '1.0.5'};
       setErrors(newErrors);
       if (Object.keys(newErrors).length === 0) {
         setLoading(true);
@@ -109,7 +109,6 @@ const LoginScreen = () => {
             [
               { 
                 text: "Cancel", 
-                onPress: () => setButtonDisable(false),  
                 style: "cancel"
               },
               { 
@@ -155,7 +154,7 @@ const LoginScreen = () => {
     <>
       <View>
         <Text style={{ padding: 5, fontWeight: 'bold', color: colors.header }}>
-          Version 1.0.4
+          Version 1.0.5
         </Text>
       </View>
       <View style={[styles.container, { backgroundColor: colors.background }]}>

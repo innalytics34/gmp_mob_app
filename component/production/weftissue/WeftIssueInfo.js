@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useState, useCallback, useLayoutEffect, useEffect } from 'react';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, TextInput as PaperInput, Provider as PaperProvider } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftIssueList from '../weftissue/WeftIssueList';
 import { resetSavedData } from './savedDataSlice';
-import { getCurrentWifiSignalStrength } from '../../checkNetworkStatus';
+import { getCurrentWifiSignalStrength, CurrentWifiSignalStrength} from '../../checkNetworkStatus';
 
 
 
@@ -30,37 +30,80 @@ const WeftIssueInfo = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedWODet, setSelectedWODet] = useState('');
   const [selectedItemNoDet, setSelectedItemDet] = useState('');
-  const [selectedProductionLoc, setSelectedProductionLoc] = useState('');
+  const [selectedProductionLoc, setSelectedProductionLoc] = useState({"Description": "Production Loom Shed:01", "UID": 1007101, "_index": 0, "label": "Production Loom Shed:01", "value": 1007101});
   const [selectedLoomDet, setSelectedLoomDet] = useState('');
   const [getItemDescriptionDp, setItemDescriptionDp] = useState([]);
   const [getItemDescription, setItemDescription] = useState('');
   const [getProductionLocationDp, setProductionLocationDp] = useState([]);
-  const [getProductionLocation, setProductionLocation] = useState('');
+  const [getProductionLocation, setProductionLocation] = useState(1007101);
   const [getWorkOrderNoDp, setWorkOrderNoDp] = useState([]);
   const [getWorkOrderNo, setWorkOrderNo] = useState('');
   const [getLoomNoDp, setLoomNoDp] = useState([]);
   const [getLoomNo, setLoomNo] = useState('');
+  const [getRemarks, setRemarks] = useState('');
+  const [getWifiSignal, setWifiSignal] = useState(0);
+  const [ishideloomDp, setIshideloomDp] = useState(false);
+
+  useEffect(() => {
+      const interval = setInterval(async () => {
+        const signalresponse = await CurrentWifiSignalStrength();
+        setWifiSignal(signalresponse);
+      }, 2000);
+      return () => clearInterval(interval);
+    }, [])
+
+
+    useEffect(() => {
+      setLoading(true);
+      if (Array.isArray(getLoomNoDp)) {
+        if (qrData != null && getLoomNoDp.length > 0 && qrData.length < 7) {
+          const result = getLoomNoDp.find(item => item.MachineNo === qrData);
+          if (result) {
+            setIshideloomDp(true);
+            setLoomNo(result.value);
+            handleLoomNoChange(result.value)
+          } else {
+            Toast.show({
+              ...toastConfig.error,
+              text1: 'QR Code Data not Found',
+            });
+            setIshideloomDp(false);
+          }
+        }
+      }
+      setLoading(false);
+    }, [getLoomNo, qrData]);  
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Weft Issue</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <Text style={{ color: colors.textLight, fontWeight: 'bold', fontSize: 16 }}>Weft Issue</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon name="wifi" size={20} color="#bfffcf" style={{ marginRight: 5 }} />
+                    <Text style={{ color: '#f66d5e', fontWeight: 'bold', fontSize: 12, opacity: 1.5 }}>
+                      {getWifiSignal} dBm
+                    </Text>
+                  </View>
+                </View>
       ),
       headerStyle: { backgroundColor: colors.header },
     });
-  }, [navigation]);
+  }, [navigation, getWifiSignal]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [response, response1] = await Promise.all([
-        getFromAPI('/get_work_order_no'),
+      const [response, response1, response2] = await Promise.all([
+        getFromAPI('/get_loomno_new?data=' + '{"weft_type" : 1}'),
         getFromAPI('/get_production_location'),
+        getFromAPI('/get_work_order_no'),
       ]);
-      setWorkOrderNoDp(response.WorkOrderNo);
+      setLoomNoDp(response.loomNo_New);
+      setWorkOrderNoDp(response2.WorkOrderNo)
       setProductionLocationDp(response1.ProductionLocation);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load filter data.');
+      Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
       console.error('Error fetching filter data:', error);
     } finally {
       setLoading(false);
@@ -90,21 +133,6 @@ const WeftIssueInfo = () => {
 
   const handleWorkOrderNoChange = async (selectedItem) => {
     setWorkOrderNo(selectedItem);
-    setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
-    const selectedData = getWorkOrderNoDp.find(item => item.value === selectedItem);
-    setSelectedWODet(selectedData);
-    const data = { WorkOrderID: selectedData.UID, LocationID: 1006297 };
-    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-    const data1 = { WorkOrderID: selectedData.UID };
-    const encodedFilterData1 = encodeURIComponent(JSON.stringify(data1));
-    const [response, response1] = await Promise.all([
-      getFromAPI('/get_wi_item_description?data=' + encodedFilterData),
-      getFromAPI('/get_loom_no?data=' + encodedFilterData1),
-    ]);
-    setItemDescriptionDp(response.ItemDescription);
-    setLoomNoDp(response1.LoomNo);
-    setItemDescription('');
-    setLoomNo('');
   };
 
   const handleProductionLocation = (value) => {
@@ -114,26 +142,38 @@ const WeftIssueInfo = () => {
     setErrors((prevErrors) => ({ ...prevErrors, ProductionLocation: '' }));
   };
 
-  const handleLoomNoChange = (selectedItem) => {
+  const handleLoomNoChange = async(selectedItem) => {
     setLoomNo(selectedItem);
     const selectedData = getLoomNoDp.find(item => item.value === selectedItem);
     setSelectedLoomDet(selectedData);
+    setWorkOrderNo(selectedData.WorkOrderID);
+    const selectedData1 = getWorkOrderNoDp.find(item => item.value === selectedData.WorkOrderID);
+    setSelectedWODet(selectedData1);
+
+    const data = { WorkOrderID: selectedData.WorkOrderID};
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const [response] = await Promise.all([
+      getFromAPI('/get_wi_item_description?data=' + encodedFilterData),
+    ]);
+    setItemDescriptionDp(response.ItemDescription);
+    setItemDescription('');
     setErrors((prevErrors) => ({ ...prevErrors, loom_no: '' }));
+    setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
   }
 
-  const navigateToCamera = () => {
-    const newErrors = {};
-    if (!docno) newErrors.docno = 'Document No is required';
-    if (!date) newErrors.date = 'Date is required';
-    if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
-    if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
-    if (!getItemDescription) newErrors.descrip = 'Item Description is required';
-    if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      navigation.navigate('Camera', {page : 'AddDoff'});
-    };
-  }
+  // const navigateToCamera = () => {
+  //   const newErrors = {};
+  //   if (!docno) newErrors.docno = 'Document No is required';
+  //   if (!date) newErrors.date = 'Date is required';
+  //   if (!getWorkOrderNo) newErrors.WorkOrderNo = 'WorkOrder No is required';
+  //   if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
+  //   if (!getItemDescription) newErrors.descrip = 'Item Description is required';
+  //   if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+  //   setErrors(newErrors);
+  //   if (Object.keys(newErrors).length === 0) {
+  //     navigation.navigate('Camera', {page : 'AddDoff'});
+  //   };
+  // }
 
 
 
@@ -158,6 +198,11 @@ const WeftIssueInfo = () => {
     return newErrors
   }
 
+  
+  const navigateToCamera = () => {
+    navigation.navigate('Camera', { page: 'DoffInfo' });
+  }
+
 
   const handleSubmit = async() => {
 
@@ -178,13 +223,14 @@ const WeftIssueInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
+    if (!getRemarks) newErrors.remarks = 'Remarks is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       if (savedData.length > 0){
         const output = checkIssueCone(savedData);
         if (output){
           const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
-            LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation 
+            LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks
           }
             setLoading(true);
             const response = await postToAPI('/insert_weft_issue', data);
@@ -260,11 +306,34 @@ const WeftIssueInfo = () => {
         </View>
 
         <View style={styles.dp}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 320 }}>
+                  <Dropdown
+                    data={getLoomNoDp}
+                    setSelectdp={handleLoomNoChange}
+                    label="Loom No"
+                    Selectdp={getLoomNo}
+                    isDisable={ishideloomDp}
+                  />
+                </View>
+                <View style={{
+                  padding: 0, marginTop: 11
+                }}>
+                  <TouchableOpacity>
+                    <Icon onPress={navigateToCamera} name="qr-code-outline" size={50} color={colors.header} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {errors.loomNo ? <Text style={styles.errorText}>{errors.loomNo}</Text> : null}
+            </View>
+
+        <View style={styles.dp}>
           <Dropdown
             data={getWorkOrderNoDp}
             setSelectdp={handleWorkOrderNoChange}
             label="WorkOrder No"
             Selectdp={getWorkOrderNo}
+            isDisable={true}
           />
           {errors.WorkOrderNo ? <Text style={styles.errorText}>{errors.WorkOrderNo}</Text> : null}
         </View>
@@ -278,18 +347,7 @@ const WeftIssueInfo = () => {
           />
           {errors.descrip ? <Text style={styles.errorText}>{errors.descrip}</Text> : null}
         </View>
-
-        <View style={styles.dp}>
-          <Dropdown
-            data={getLoomNoDp}
-            setSelectdp={handleLoomNoChange}
-            label="Loom No"
-            Selectdp={getLoomNo}
-          />
-          {errors.loom_no ? <Text style={styles.errorText}>{errors.loom_no}</Text> : null}
-        </View>
-
-
+       
         <View style={styles.dp}>
           <Dropdown
             data={getProductionLocationDp}
@@ -299,6 +357,28 @@ const WeftIssueInfo = () => {
           />
           {errors.ProductionLocation && <Text style={styles.errorText}>{errors.ProductionLocation}</Text>}
         </View>
+
+        <View style={styles.row}>
+               <PaperInput
+                        label="Remarks"
+                        value={getRemarks}
+                        style={[styles.input, { fontSize: 14 }]}
+                        onChangeText={(text) => {
+                          setRemarks(text);
+                          setErrors((prevErrors) => ({ ...prevErrors, remarks: '' }));
+                        }}
+                        mode="outlined"
+                        theme={{
+                          colors: {
+                            primary: colors.data,
+                            error: colors.error,
+                            outline: colors.data,
+                          },
+                          roundness: 4,
+                        }}
+                      />
+        </View>
+        {errors.remarks && <Text style={styles.errorText}>{errors.remarks}</Text>}
 
         {/* <View style={styles.row}>
           <PaperInput
@@ -323,7 +403,8 @@ const WeftIssueInfo = () => {
         </View> */}
 
         <View>
-          <WeftIssueList getItemDescription={getItemDescription} qrData={qrData} errors={errors} checkInput={checkInput} navigateToCamera={navigateToCamera}/>
+          <WeftIssueList getItemDescription={getItemDescription} qrData={''} errors={errors}
+           checkInput={checkInput} navigateToCamera={navigateToCamera} getProductionLocation={getProductionLocation}/>
         </View>
 
         <Button
