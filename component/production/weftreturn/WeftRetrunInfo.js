@@ -194,6 +194,15 @@ const WeftReturnInfo = () => {
     return true;
   }
 
+  function checkReturnWeight(data) {
+    for (const item of data) {
+      if (item.ReturnWeight === 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   const checkInput = () => {
     const newErrors = {};
     if (!docno) newErrors.docno = 'Document No is required';
@@ -257,6 +266,16 @@ const WeftReturnInfo = () => {
         });
         return;
       }
+
+      const output1 = checkReturnWeight(savedData);
+      if (!output1){
+        Toast.show({
+          ...toastConfig.error,
+          text1: 'Please Add ReturnWeight',
+        });
+        return;
+      }
+
 
     const signalresponse = await getCurrentWifiSignalStrength();
     if (signalresponse.rval == 0){

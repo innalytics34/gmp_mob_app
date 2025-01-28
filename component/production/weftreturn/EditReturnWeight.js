@@ -6,11 +6,10 @@ import { colors } from '../../config/config';
 import { updateSavedData } from './savedDataSlice';
 import { useDispatch } from 'react-redux';
 
-const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
+const UpdateReturnWeight = ({ IssueCone, StockID, StockQty }) => {
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
-  const [docNo, setDocNo] = useState(String(StockCone));
-  const [issueCone, setIssueCone] = useState('');
+  const [ReturnWeight, setReturnWeight] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleOpenModal = () => {
@@ -23,18 +22,19 @@ const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
   };
 
   const handleSubmit = () => {
-    const stockValue = parseFloat(StockCone);
-    const issueValue = parseFloat(issueCone);
-
-    if (isNaN(issueValue) || issueValue > stockValue) {
-      setErrorMessage(`ReturnCone must be less than or equal to StockCone (${StockCone})`);
+    const StockQty1 = parseFloat(StockQty);
+    const ReturnWeightValue = parseFloat(ReturnWeight);
+    console.log(ReturnWeightValue, StockQty1)
+    if (isNaN(ReturnWeightValue) || ReturnWeightValue > StockQty1) {
+      setErrorMessage(`ReturnWeight must be less than or equal to StockQty(${StockQty1})`);
       return;
     }
     dispatch(updateSavedData({ 
         id: StockID, 
         updatedItem: { 
-          IssueCone: issueCone, 
-          IssueQty: issueValue * ConeWeight 
+          ReturnWeight: ReturnWeight, 
+          ReturnConeWeight: ReturnWeightValue / IssueCone
+          
         } 
       }));
     handleCloseModal();
@@ -52,8 +52,8 @@ const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <PaperInput
-              label="StockCone"
-              value={String(StockCone)}
+              label="StockQty"
+              value={String(StockQty)}
               style={[styles.input, { fontSize: 14 }]}
               mode="outlined"
               theme={{
@@ -66,9 +66,9 @@ const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
               }}
             />
             <PaperInput
-              label="ReturnCone"
-              value={issueCone}
-              onChangeText={setIssueCone}
+              label="ReturnWeight"
+              value={ReturnWeight}
+              onChangeText={setReturnWeight}
               style={[styles.input, { fontSize: 14 }]}
               mode="outlined"
               keyboardType="numeric"
@@ -126,4 +126,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UpdateIssueCone;
+export default UpdateReturnWeight;

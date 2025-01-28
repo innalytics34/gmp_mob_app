@@ -11,6 +11,7 @@ import { appendSavedData, resetSavedData, deleteSavedData } from './savedDataSli
 import { resetQrData } from '../../barcodescan/QrSlice';
 import Toast from 'react-native-toast-message';
 import EditReturnCone from '../weftreturn/EditReturnCone';
+import EditReturnWeight from '../weftreturn/EditReturnWeight';
 
 const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkInput, ProductionLocation, workorderID, loomID, navigateToCamera }) => {
   const dispatch = useDispatch();
@@ -20,8 +21,8 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
   const [selectedItems, setSelectedItems] = useState([]);
   const [getWIList, setWIList] = useState([]);
 
-  const tableHead = ['','LotNo', 'StockCone', 'ConeWeight', 'StockQty', 'ReturnCone'];
-  const widthArr = [35, 100, 100, 100, 100, 120];
+  const tableHead = ['','LotNo', 'StockCone', 'ConeWeight', 'StockQty', 'ReturnCone','ReturnConeWeight','ReturnWeight'];
+  const widthArr = [35, 100, 100, 100, 100, 120, 120, 120];
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -147,6 +148,14 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
                           ConeWeight={rowData.ConeWeight} />
                       </TouchableOpacity>
                     </View>,
+                    rowData.ReturnConeWeight.toFixed(13),
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text>{rowData.ReturnWeight}</Text>
+                    <TouchableOpacity style={{ marginLeft: 10 }}>
+                     { rowData.IssueCone != 0 && <EditReturnWeight IssueCone = {rowData.IssueCone} StockID={rowData.StockID}
+                        StockQty={rowData.StockQty} /> }
+                    </TouchableOpacity>
+                  </View>,
                   ]}
                   widthArr={widthArr}
                   style={[styles.row, index % 2 && { backgroundColor: 'white' }]}
