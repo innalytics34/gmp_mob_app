@@ -6,7 +6,7 @@ import { colors } from '../../config/config';
 import { updateSavedData } from './savedDataSlice';
 import { useDispatch } from 'react-redux';
 
-const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
+const UpdateIssueCone = ({ StockCone, StockID, ConeWeight, getStatus }) => {
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [docNo, setDocNo] = useState(String(StockCone));
@@ -25,11 +25,13 @@ const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
   const handleSubmit = () => {
     const stockValue = parseFloat(StockCone);
     const issueValue = parseFloat(issueCone);
-
-    if (isNaN(issueValue) || issueValue > stockValue) {
-      setErrorMessage(`ReturnCone must be less than or equal to StockCone (${StockCone})`);
-      return;
+    if (getStatus == 1){
+      if (isNaN(issueValue) || issueValue > stockValue) {
+        setErrorMessage(`ReturnCone must be less than or equal to StockCone (${StockCone})`);
+        return;
+      }
     }
+   
     dispatch(updateSavedData({ 
         id: StockID, 
         updatedItem: { 
@@ -81,9 +83,19 @@ const UpdateIssueCone = ({ StockCone, StockID, ConeWeight }) => {
                 roundness: 4,
               }}
             />
-            {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : <Text style={styles.errorText1}>{'ReturnCone must be less than or equal to StockCone'}</Text>}
+            {
+                getStatus !== 16 && (
+                  errorMessage ? (
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  ) : (
+                    <Text style={styles.errorText1}>
+                      {'ReturnCone must be less than or equal to StockCone'}
+                    </Text>
+                  )
+                )
+              }
+
+
             <View style={styles.row}>
               <Button title="Close" color={colors.error} onPress={handleCloseModal} />
               <Button title="Submit" color={colors.data} onPress={handleSubmit} />

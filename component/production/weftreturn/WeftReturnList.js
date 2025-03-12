@@ -13,7 +13,7 @@ import Toast from 'react-native-toast-message';
 import EditReturnCone from '../weftreturn/EditReturnCone';
 import EditReturnWeight from '../weftreturn/EditReturnWeight';
 
-const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkInput, ProductionLocation, workorderID, loomID, navigateToCamera }) => {
+const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkInput, ProductionLocation, workorderID, loomID, getStatus, navigateToCamera }) => {
   const dispatch = useDispatch();
   const savedData = useSelector((state) => state.savedDataReturn.items);
 
@@ -145,7 +145,7 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
                       <Text>{rowData.IssueCone}</Text>
                       <TouchableOpacity style={{ marginLeft: 10 }}>
                         <EditReturnCone StockCone={rowData.StockCone} StockID={rowData.StockID}
-                          ConeWeight={rowData.ConeWeight} />
+                          ConeWeight={rowData.ConeWeight} getStatus={getStatus}/>
                       </TouchableOpacity>
                     </View>,
                     rowData.ReturnConeWeight.toFixed(13),
@@ -153,7 +153,7 @@ const WeftReturnList = React.memo(({ getItemDescription, qrData, errors, checkIn
                     <Text>{rowData.ReturnWeight}</Text>
                     <TouchableOpacity style={{ marginLeft: 10 }}>
                      { rowData.IssueCone != 0 && <EditReturnWeight IssueCone = {rowData.IssueCone} StockID={rowData.StockID}
-                        StockQty={rowData.StockQty} /> }
+                        StockQty={rowData.StockQty} getStatus={getStatus}/> }
                     </TouchableOpacity>
                   </View>,
                   ]}

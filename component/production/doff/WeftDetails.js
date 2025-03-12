@@ -4,27 +4,32 @@ import { DataTable } from 'react-native-paper';
 import { colors } from '../../config/config';
 import { getFromAPI } from '../../../apicall/apicall';
 
-const WeftDetails = ({ getWeftDetails, selectedLoomNoDet, setischeckweftcount }) => {
+const WeftDetails = ({ getWeftDetails, selectedLoomNoDet, setischeckweftcount, doffMeter  }) => {
   const [weftCounts, setWeftCounts] = useState({});
 
   const getweftCount = async (item) => {
-    const data = { MachineId: selectedLoomNoDet.MachineID, ItemUID: item.Item_UID };
+    const data = { MachineId: selectedLoomNoDet.MachineID, 
+      ItemUID: item.Item_UID, LotNo : item.LotNo, 
+      loomUID:  selectedLoomNoDet.UID,
+       WorkOrderID:  selectedLoomNoDet.WorkOrderID,
+        doffMeter: doffMeter, WeightPerMeter: item.WeightPerMeter };
     const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-    const count = await getFromAPI('/actual_count_check?data=' + encodedFilterData);
-    if (count == 0){
+    const response = await getFromAPI('/actual_count_check?data=' + encodedFilterData);
+    if (response.count == 0){
       setischeckweftcount(true);
     }
     else{
       setischeckweftcount(false);
     }
-    return count || 0; 
+    return { count: response.count || 0, stock_val: response.stock_val };
   };
 
   useEffect(() => {
     const fetchWeftCounts = async () => {
       const counts = {};
       for (const item of getWeftDetails) {
-        counts[item.Item_UID] = await getweftCount(item);
+        const { count, stock_val } = await getweftCount(item);  
+        counts[item.Item_UID] = count;  
       }
       setWeftCounts(counts);
     };

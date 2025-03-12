@@ -12,6 +12,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import WeftReturnList from '../weftreturn/WeftReturnList';
+import { updateSavedDataAll } from './savedDataSlice';
+import { useDispatch } from 'react-redux';
 // import {bluetoothconfig} from '../../bluetoothPrinter/bluetoothconfig';
 // import { BleManager } from 'react-native-ble-plx';
 // import { format } from 'date-fns';
@@ -22,6 +24,7 @@ import { getCurrentWifiSignalStrength, CurrentWifiSignalStrength } from '../../c
 
 const WeftReturnInfo = () => {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const qrData = useSelector(state => state.QRData.data);
   const savedData = useSelector((state) => state.savedDataReturn.items);
   const [loading, setLoading] = useState(false);
@@ -49,6 +52,9 @@ const WeftReturnInfo = () => {
   const [ishideloomDp, setIshideloomDp] = useState(false);
   const [getRemarks, setRemarks] = useState('');
   const [getWifiSignal, setWifiSignal] = useState(0);
+  const [getStatusDp, setStatusDp] = useState([]);
+  const [getStatus, setStatus] = useState('');
+   const [submitButtonEnable, setsubmitButtonEnable] = useState(false);
 
   useEffect(() => {
         const interval = setInterval(async () => {
@@ -101,14 +107,16 @@ const WeftReturnInfo = () => {
   const fetchData = async () => {
      setLoading(true);
      try {
-       const [response, response1, response2] = await Promise.all([
+       const [response, response1, response2, response3] = await Promise.all([
          getFromAPI('/get_loomno_new?data=' + '{"weft_type" : 2}'),
          getFromAPI('/get_production_location'),
          getFromAPI('/get_work_order_no'),
+         getFromAPI('/weft_return_status'),
        ]);
        setLoomNoDp(response.loomNo_New);
        setWorkOrderNoDp(response2.WorkOrderNo)
        setProductionLocationDp(response1.ProductionLocation);
+       setStatusDp(response3.return_status_dp)
      } catch (error) {
        Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
        console.error('Error fetching filter data:', error);
@@ -167,7 +175,7 @@ const WeftReturnInfo = () => {
       setErrors((prevErrors) => ({ ...prevErrors, loom_no: '' }));
       setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
     }
- 
+
 
   // const navigateToCamera = () => {
   //   const newErrors = {};
@@ -211,7 +219,8 @@ const WeftReturnInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    if (!getBlueToothConfig) newErrors.BlueToothConfig = 'Printer is required';
+    // if (!getBlueToothConfig) newErrors.BlueToothConfig = 'Printer is required';
+    if (!getStatus) newErrors.Status = 'Status is required';
     setErrors(newErrors);
     return newErrors
   }
@@ -253,7 +262,7 @@ const WeftReturnInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    if (!getRemarks) newErrors.remarks = 'Remarks is required';
+    if (!getStatus) newErrors.Status = 'Status is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       // const bluetooth_conf = getBlueToothConfigList.find(item => item.value === getBlueToothConfig);
@@ -288,7 +297,7 @@ const WeftReturnInfo = () => {
     }
 
       const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
-        LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks 
+        LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks || '' , status :getStatus
       }
         const printnot = false;
         if (printnot) {
@@ -310,6 +319,7 @@ const WeftReturnInfo = () => {
           );
         }
         else{
+            setsubmitButtonEnable(true);
             setLoading(true);
             setButtonDisable(true);
             const response = await postToAPI('/insert_weft_return', data);
@@ -364,6 +374,12 @@ const WeftReturnInfo = () => {
    const handlePrinterTypeChange = async(value)=>{
     setBlueToothConfig(value);
     setErrors((prevErrors) => ({ ...prevErrors, BlueToothConfig: '' }));
+  }
+
+  const handleStatusChange = (value)=>{
+    setStatus(value);
+    dispatch(updateSavedDataAll());
+    setErrors((prevErrors) => ({ ...prevErrors, Status: '' }));
   }
 
   return (
@@ -457,6 +473,16 @@ const WeftReturnInfo = () => {
           {errors.ProductionLocation && <Text style={styles.errorText}>{errors.ProductionLocation}</Text>}
         </View>
 
+        <View style={styles.dp}>
+          <Dropdown
+            data={getStatusDp}
+            setSelectdp={handleStatusChange}
+            label="Status"
+            Selectdp={getStatus}
+          />
+          {errors.Status && <Text style={styles.errorText}>{errors.Status}</Text>}
+        </View>
+
 
         {/* <View style={styles.dp}>
               <Dropdown
@@ -517,7 +543,8 @@ const WeftReturnInfo = () => {
           qrData={''} errors={errors} checkInput={checkInput} 
           ProductionLocation={getProductionLocation} 
           workorderID ={getWorkOrderNo}
-          loomID ={getLoomNo}
+          loomID ={selectedLoomDet.MachineID}
+          getStatus ={getStatus}
           navigateToCamera={navigateToCamera}/>
         </View>
 
@@ -525,7 +552,7 @@ const WeftReturnInfo = () => {
           icon="content-save"
           mode="contained"
           style={{ backgroundColor: colors.button, marginBottom: 20, borderRadius: 10 }}
-          disabled={ButtonDisable}
+          disabled={submitButtonEnable}
           onPress={handleSubmit}
         >
           Save

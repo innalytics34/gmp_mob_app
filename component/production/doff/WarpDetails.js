@@ -18,12 +18,10 @@ const WarpDetails = ({ loom_detail }) => {
     const qrData = useSelector(state => state.QRData.data);
     const [WarpBeamTypeOptions, setWarpBeamTypeOptions] = useState([]);
     const warpDetails = useSelector(state => state.warpDetails.warpDetails);
-    const warpDetailsInfo = useSelector(state => state.doffCommon.warpSelectedInfo);
     const [modalVisible, setModalVisible] = React.useState(false);
     const [selectedRow, setSelectedRow] = React.useState(null);
     const [loading, setLoading] = useState(false);
     const [scannedData, setScannedData] = useState(null); 
-
     useEffect(() => {
         return () => {
             dispatch(resetQrData());

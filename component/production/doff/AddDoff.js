@@ -57,6 +57,7 @@ const AddDoff = () => {
   const [ischeckweftcount, setischeckweftcount] = useState(false);
   const [stat_ProductionMeterFirstRoll, setstat_ProductionMeterFirstRoll] = useState(0);
   const [getWifiSignal, setWifiSignal] = useState(0);
+  const [getStockVal, setStockVal] = useState([]);
 
 
   useEffect(() => {
@@ -321,8 +322,20 @@ const AddDoff = () => {
     dispatch(setWarpDetails(datas.beam_knotting[0].Warp));
   }
 
-  const handleSubmit = async () => {
 
+  const getweftCount_stock_val = async (item) => {
+      const data = { MachineId: selectedLoomNoDet.MachineID, 
+        ItemUID: item.Item_UID, LotNo : item.LotNo, 
+        loomUID:  selectedLoomNoDet.UID,
+         WorkOrderID:  selectedLoomNoDet.WorkOrderID,
+          doffMeter: doffMeter, WeightPerMeter: item.WeightPerMeter };
+      const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+      const response = await getFromAPI('/actual_count_check?data=' + encodedFilterData);
+      return { count: response.count || 0, stock_val: response.stock_val };
+    };
+
+
+  const handleSubmit = async () => {
     const signalresponse = await getCurrentWifiSignalStrength();
     if (signalresponse.rval == 0) {
       Toast.show({
@@ -383,9 +396,32 @@ const AddDoff = () => {
         return;
       }
 
+      const counts = [];
+      const newStockVals = []; 
+      for (const item of getWeftDetails) {
+        const { count, stock_val } = await getweftCount_stock_val(item);  
+        counts.push(count);
+        newStockVals.push(stock_val);
+      }
+
+      const checkForZero = (arr) => {
+        return arr.includes(0) ? true : false; 
+      };
+
+      const checkArrayValues = (arr) => {
+        console.log(selectedLoomNoDet)
+        if (arr.every(value => value === 0)) {
+          return { result: true, message: 'good' }; 
+        } else if (arr.includes(2)) {
+          return { result: false, message: 'Weft Stock Not Available This LoomNo :' + selectedLoomNoDet.SortNo}; 
+        } else if (arr.includes(1)) {
+          return { result: false, message: 'Weft Stock Not Available This LoomNo :' + selectedLoomNoDet.SortNo}; 
+        }
+        return { result: false, message: 'Unknown error' }; 
+      };
       const res = await getFromAPI('/get_setting')
       if (res.setting[0].WeftActualCount > 0) {
-        if (ischeckweftcount) {
+        if (checkForZero(counts)) {
           Toast.show({
             ...toastConfig.error,
             text1: 'Weft Count 0 not Allowed!',
@@ -393,6 +429,19 @@ const AddDoff = () => {
           return;
         }
       }
+      if (![1006196, 1006342].includes(getRollType)) {
+        if (res.setting[0].LoomWiseWeftIssue > 0) {
+          const res_stockval = checkArrayValues(newStockVals)
+          if (!res_stockval.result) {
+            Toast.show({
+              ...toastConfig.error,
+              text1: res_stockval.message,
+            });
+            return;
+          }
+        }
+      }
+     
 
       const CrimpValidateData = {
         WorkOrderID: selectedLoomNoDet.WorkOrderID,
@@ -514,7 +563,7 @@ const AddDoff = () => {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
-            warpDataLoad(doffinfo);
+            // warpDataLoad(doffinfo);
             navigation.navigate('LastRollSortChange', { doffinfo });
           }
           else {
@@ -538,7 +587,7 @@ const AddDoff = () => {
           const bal_beam_stat = checkBalanceBeam(getBeamDetails, 1, CrimpValidate.CrimpValidate)
           if (bal_beam_stat.success) {
             dispatch(setdoffinfo(doffinfo));
-            warpDataLoad(doffinfo);
+            // warpDataLoad(doffinfo);
             navigation.navigate('ScBc', { doffinfo });
           }
           else {
@@ -550,7 +599,7 @@ const AddDoff = () => {
             }
             else {
               dispatch(setdoffinfo(doffinfo));
-              warpDataLoad(doffinfo);
+              // warpDataLoad(doffinfo);
               navigation.navigate('ScBc', { doffinfo });
             }
           }
@@ -824,7 +873,7 @@ const AddDoff = () => {
               <BeamDetails getBeamDetails={getBeamDetails} doffMeter={doffMeter} />
             </View>
             <View style={styles.row}>
-              <WeftDetails getWeftDetails={getWeftDetails} selectedLoomNoDet={selectedLoomNoDet} setischeckweftcount={setischeckweftcount} />
+              <WeftDetails getWeftDetails={getWeftDetails} selectedLoomNoDet={selectedLoomNoDet} setischeckweftcount={setischeckweftcount} doffMeter={doffMeter}/>
             </View>
             <Button
               icon="content-save"

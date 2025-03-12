@@ -30,7 +30,7 @@ const BeamKnotting = () => {
   const [errors, setErrors] = useState({});
   const [docno, setdocno] = useState('AutoNumber');
   const [date, setdate] = useState(new Date().toISOString().split('T')[0]);
-  const [getLoomNo, setLoomNo] = useState(doffinfo.loom_detail.value);
+  const [getLoomNo, setLoomNo] = useState(doffinfowithLRSC.LRSortChange.WorkOrderNoDet.value);
   const [getLoomNoDp, setLoomNoDp] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -80,7 +80,7 @@ const BeamKnotting = () => {
       const data = {MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: doffinfowithLRSC.LRSortChange.WorkOrderNoDet.UID}
       const encodedFilterData = encodeURIComponent(JSON.stringify(data));
       const [response, response1, response2, response3, response4] = await Promise.all([
-        getFromAPI('/loom_no_dropdown'),
+        getFromAPI('/loom_no_dropdown_sc?data=' + encodedFilterData),
         getFromAPI('/changeType_dropdown'),
         getFromAPI('/shift_dropdown'), 
         getFromAPI('/sc_beam_knotting_details?data=' + encodedFilterData), 
@@ -91,7 +91,6 @@ const BeamKnotting = () => {
       setShiftDp(response2.Shift)
       setLoomNoDp(response.document_info); 
       setWeftDetails(response3.beam_knotting[0].Weft)
-      // dispatch(setWarpDetails(response3.beam_knotting[0].Warp));  
       setBeamKnotting(response3.beam_knotting[0]); 
     } catch (error) {
       Alert.alert('Error', 'Failed to load filter data. Logout and Try Again.');
@@ -120,17 +119,6 @@ const BeamKnotting = () => {
     setLoomNo(selectedLoom);
     const selectedData = getLoomNoDp.find(item => item.value === selectedLoom);
     setSelectedLoomDet(selectedData)
-    const data = { UID: selectedData.UID, Description: selectedData.Description }
-    // const encodedFilterData = encodeURIComponent(JSON.stringify(data));
-    // const response = await getFromAPI('/get_beam_weft_details?data=' + encodedFilterData);
-    // const sampledata = [
-    //     {YarnMaterial: 'Cotton', Count: '50', End: '120',WarpBeamType: '0', BeamNo: '', EmptyBeamNo: '', SetNo: '', BeamMeter: '', WarpedYarn: '' },
-    // ]
-    // if (selectedData) {
-    //     dispatch(setWarpDetails(sampledata));
-    // } else {
-    //     dispatch(setWarpDetails([]));
-    // }
   };
 
  
@@ -351,7 +339,7 @@ const BeamKnotting = () => {
             setSelectdp={handleLoomNoChange}
             label="Loom No"
             Selectdp={getLoomNo}
-            isDisable={true}
+            // isDisable={true}
           />  
         </View>
 

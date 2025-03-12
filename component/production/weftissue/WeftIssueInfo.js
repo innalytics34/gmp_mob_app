@@ -43,6 +43,7 @@ const WeftIssueInfo = () => {
   const [getRemarks, setRemarks] = useState('');
   const [getWifiSignal, setWifiSignal] = useState(0);
   const [ishideloomDp, setIshideloomDp] = useState(false);
+  const [submitButtonEnable, setsubmitButtonEnable] = useState(false);
 
   useEffect(() => {
       const interval = setInterval(async () => {
@@ -203,9 +204,17 @@ const WeftIssueInfo = () => {
     navigation.navigate('Camera', { page: 'DoffInfo' });
   }
 
+  const loomWiseWeftReturnStockCheck = async()=>{
+    const data = { workorder_id: selectedWODet.UID, loomid:selectedLoomDet.MachineID};
+    const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+    const [response] = await Promise.all([
+      getFromAPI('/LoomWiseWeftReturnStockCheck?data=' + encodedFilterData),
+    ]);
+    return response
+  }
+
 
   const handleSubmit = async() => {
-
     const signalresponse = await getCurrentWifiSignalStrength();
         if (signalresponse.rval == 0){
           Toast.show({
@@ -223,15 +232,24 @@ const WeftIssueInfo = () => {
     if (!getLoomNo) newErrors.loom_no = 'Loom No is required';
     if (!getItemDescription) newErrors.descrip = 'Item Description is required';
     if (!getProductionLocation) newErrors.ProductionLocation = 'Production Location is required';
-    if (!getRemarks) newErrors.remarks = 'Remarks is required';
+    // if (!getRemarks) newErrors.remarks = 'Remarks is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       if (savedData.length > 0){
         const output = checkIssueCone(savedData);
+        const checkres = await loomWiseWeftReturnStockCheck();
+        if (checkres == 1){
+          Toast.show({
+            ...toastConfig.error,
+            text1: 'Please Close Weft Stock This LoomNo :' + selectedLoomDet.label,
+          });
+          return;
+        }
         if (output){
           const data = { WIList: savedData,  docno, date,selectedWODet, WorkOrderNo:getWorkOrderNo,selectedItemNoDet,selectedLoomDet,selectedProductionLoc,
-            LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks
+            LoomNo: getLoomNo, ItemDescription :getItemDescription,ProductionLocation:getProductionLocation, Remarks:getRemarks || ''
           }
+            setsubmitButtonEnable(true);
             setLoading(true);
             const response = await postToAPI('/insert_weft_issue', data);
             setLoading(false);
@@ -411,7 +429,7 @@ const WeftIssueInfo = () => {
           icon="content-save"
           mode="contained"
           style={{ backgroundColor: colors.button, marginBottom: 20, borderRadius: 10 }}
-          disabled={loading}
+          disabled={submitButtonEnable}
           onPress={handleSubmit}
         >
           Save

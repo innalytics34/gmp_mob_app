@@ -6,7 +6,7 @@ import { colors } from '../../config/config';
 import { updateSavedData } from './savedDataSlice';
 import { useDispatch } from 'react-redux';
 
-const UpdateReturnWeight = ({ IssueCone, StockID, StockQty }) => {
+const UpdateReturnWeight = ({ IssueCone, StockID, StockQty, getStatus }) => {
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [ReturnWeight, setReturnWeight] = useState('');
@@ -24,11 +24,14 @@ const UpdateReturnWeight = ({ IssueCone, StockID, StockQty }) => {
   const handleSubmit = () => {
     const StockQty1 = parseFloat(StockQty);
     const ReturnWeightValue = parseFloat(ReturnWeight);
-    console.log(ReturnWeightValue, StockQty1)
-    if (isNaN(ReturnWeightValue) || ReturnWeightValue > StockQty1) {
-      setErrorMessage(`ReturnWeight must be less than or equal to StockQty(${StockQty1})`);
-      return;
+
+    if (getStatus == 1){
+      if (isNaN(ReturnWeightValue) || ReturnWeightValue > StockQty1) {
+        setErrorMessage(`ReturnWeight must be less than or equal to StockQty(${StockQty1})`);
+        return;
+      }
     }
+   
     dispatch(updateSavedData({ 
         id: StockID, 
         updatedItem: { 
@@ -81,9 +84,18 @@ const UpdateReturnWeight = ({ IssueCone, StockID, StockQty }) => {
                 roundness: 4,
               }}
             />
-            {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : <Text style={styles.errorText1}>{'ReturnCone must be less than or equal to StockCone'}</Text>}
+
+             {
+                            getStatus !== 16 && (
+                              errorMessage ? (
+                                <Text style={styles.errorText}>{errorMessage}</Text>
+                              ) : (
+                                <Text style={styles.errorText1}>
+                                  {'ReturnCone must be less than or equal to StockCone'}
+                                </Text>
+                              )
+                            )
+              }
             <View style={styles.row}>
               <Button title="Close" color={colors.error} onPress={handleCloseModal} />
               <Button title="Submit" color={colors.data} onPress={handleSubmit} />

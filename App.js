@@ -17,21 +17,21 @@ const AppContent = () => {
 
   const { user, loading, logout } = useAuth();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const userData = await AsyncStorage.getItem('user');
-      if(userData){
-        const res = await getFromAPI('/check_is_login'); 
-        if (res === 0) {
-            logout();
-            navigation.navigate('Login');
-        }
-      }
-    };
-    fetchData();
-    const intervalId = setInterval(fetchData, 3000);
-    return () => clearInterval(intervalId);
-}, []);
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       const userData = await AsyncStorage.getItem('user');
+//       if(userData){
+//         const res = await getFromAPI('/check_is_login'); 
+//         if (res === 0) {
+//             logout();
+//             navigation.navigate('Login');
+//         }
+//       }
+//     };
+//     fetchData();
+//     const intervalId = setInterval(fetchData, 3000);
+//     return () => clearInterval(intervalId);
+// }, []);
 
 
 

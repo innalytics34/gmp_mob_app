@@ -20,6 +20,16 @@ const savedDataSlice = createSlice({
         state.items[index] = { ...state.items[index], ...updatedItem }; // Merge updates
       }
     },
+    updateSavedDataAll(state, action) {
+      // Loop through all items and set specific properties to 0
+      state.items = state.items.map(item => ({
+        ...item,
+        IssueCone: 0,
+        IssueQty: 0,
+        ReturnWeight: 0,
+        ReturnConeWeight: 0,
+      }));
+    },
     // Delete an item from the saved data
     deleteSavedData(state, action) {
       const id = action.payload; // Expecting the QRCode to delete
@@ -32,5 +42,5 @@ const savedDataSlice = createSlice({
   },
 });
 
-export const { appendSavedData, updateSavedData, deleteSavedData, resetSavedData } = savedDataSlice.actions;
+export const { appendSavedData, updateSavedData, deleteSavedData, resetSavedData, updateSavedDataAll } = savedDataSlice.actions;
 export default savedDataSlice.reducer;

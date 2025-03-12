@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-const API_BASE_URL = "http://192.168.0.125:813/GMPMob";
+const API_BASE_URL = "http://192.168.0.109:813/GMPMob";
 
 const getipconfig = (ipconfig)=>{
   // if (JSON.parse(ipconfig)){

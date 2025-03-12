@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { getFromAPI, postToAPI } from '../../../apicall/apicall';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
+import { setWarpDetails } from './warpSlice';
 
 
 
@@ -42,6 +43,14 @@ const BeamKnotting = () => {
       headerStyle: { backgroundColor: colors.header },
     });
   }, [navigation]);
+
+
+    const warpDataLoad = async (doffinfo, WorkOrder_id) => {
+      const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: WorkOrder_id }
+      const encodedFilterData = encodeURIComponent(JSON.stringify(data));
+      const datas = await getFromAPI('/get_sortchange_beamchange?data=' + encodedFilterData)
+      dispatch(setWarpDetails(datas.sortchange_beamchange[0].Warp));
+    }
 
   const fetchData = async () => {
     setLoading(true);
@@ -81,7 +90,7 @@ const BeamKnotting = () => {
     setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
     setSortNo(selectedData.SortCode)
     setSelectedLoomDet(selectedData)
- 
+    warpDataLoad(doffinfo, selectedLoom)
   };
 
   const checkLoomMapping = (data) => {
