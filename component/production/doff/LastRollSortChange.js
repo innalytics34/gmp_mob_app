@@ -45,8 +45,8 @@ const BeamKnotting = () => {
   }, [navigation]);
 
 
-    const warpDataLoad = async (doffinfo, WorkOrder_id) => {
-      const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: WorkOrder_id }
+    const warpDataLoad = async (doffinfo, WorkOrder_id, selectedData) => {
+      const data = { MachineID: doffinfo.loom_detail.MachineID, WorkOrder_id: WorkOrder_id, selectedData }
       const encodedFilterData = encodeURIComponent(JSON.stringify(data));
       const datas = await getFromAPI('/get_sortchange_beamchange?data=' + encodedFilterData)
       dispatch(setWarpDetails(datas.sortchange_beamchange[0].Warp));
@@ -90,7 +90,8 @@ const BeamKnotting = () => {
     setErrors((prevErrors) => ({ ...prevErrors, WorkOrderNo: '' }));
     setSortNo(selectedData.SortCode)
     setSelectedLoomDet(selectedData)
-    warpDataLoad(doffinfo, selectedLoom)
+    console.log(selectedData, "----cccc33")
+    warpDataLoad(doffinfo, selectedLoom, selectedData)
   };
 
   const checkLoomMapping = (data) => {

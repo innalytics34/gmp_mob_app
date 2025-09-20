@@ -6,7 +6,7 @@ import Toast from 'react-native-toast-message';
 import { colors,toastConfig  } from '../../config/config';
 import Loader from '../../loader/Loader';
 import Dropdown from '../../dropdown/Dropdown';
-import WrapDetails from './WarpDetails';
+import WrapDetails from './WarpDetailsLR3';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getFromAPI, postToAPI } from '../../../apicall/apicall';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -391,7 +391,7 @@ const BeamKnotting = () => {
             </View>
             
         <View style={styles.row}>
-          <WrapDetails loom_detail ={doffinfo.loom_detail} />
+          <WrapDetails loom_detail ={doffinfo.loom_detail} workorderNoShortC = {doffinfowithLRSC.LRSortChange.WorkOrderNoDet.value}/>
         </View>
         <Button 
           icon="content-save" 
